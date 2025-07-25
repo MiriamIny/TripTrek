@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid'
  
 export default function Trips() {
   
-  const API_Endpoint =  'https://ne4b8p6lzg.execute-api.us-east-1.amazonaws.com'
+  const API_Endpoint =  'https://ne4b8p6lzg.execute-api.us-east-1.amazonaws.com/'
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(false)
   const [selectedTrip, setSelectedTrip] = useState(null)
