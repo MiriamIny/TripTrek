@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { TripProvider, useTripContext } from './TripContext'
 
-const API_Endpoint = 'https://543chrrabf.execute-api.us-east-1.amazonaws.com/'
+const API_Endpoint = 'https://f4ww6942k8.execute-api.us-east-1.amazonaws.com/'
 
 // Create a mock useAuth function that we can control
 let mockUseAuth
