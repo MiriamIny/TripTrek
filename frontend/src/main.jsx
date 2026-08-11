@@ -29,37 +29,35 @@ import { TripProvider } from './context/TripContext.jsx';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Authenticator
+      loginMechanisms={['email']}
+      signUpAttributes={['email', 'name']}
       formFields={{
         signUp: {
-          username: {
+          name: {
             order: 1,
-            placeholder: 'Enter username',
-            isRequired: true,
-          },
-          preferred_username: {
-            order: 2,
-            placeholder: 'Enter your preferred username',
+            label: 'Name',
+            placeholder: 'Your name',
             isRequired: true,
           },
           email: {
-            order: 3,
-            placeholder: 'name@host.com',
+            order: 1,
+            placeholder: 'name@example.com',
             isRequired: true,
           },
           password: {
-            order: 4,
+            order: 2,
             placeholder: 'Enter password',
             isRequired: true,
           },
           confirm_password: {
-            order: 5,
+            order: 3,
             placeholder: 'Reenter password',
             isRequired: true,
           },
         },
         signIn: {
           username: {
-            placeholder: 'Enter username',
+            placeholder: 'name@example.com',
           },
           password: {
             placeholder: 'Enter password',
