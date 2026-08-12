@@ -69,6 +69,65 @@ input:focus, textarea:focus {
 }
 
 /* ===== Account Navigation ===== */
+.main-navbar-logo {
+  max-height: 80px;
+}
+
+.main-navbar-toggle {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(46, 125, 50, 0.25);
+  border-radius: 10px;
+}
+
+.main-navbar-toggle:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.16);
+}
+
+.main-nav-link {
+  position: relative;
+  padding: 0.55rem 0.7rem !important;
+  color: #37474f !important;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.main-nav-link-label {
+  position: relative;
+  display: inline-block;
+}
+
+.main-nav-link-label::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -0.25rem;
+  left: 0;
+  height: 1px;
+  background: #2e7d32;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 150ms ease;
+}
+
+.main-nav-link:hover,
+.main-nav-link:focus-visible,
+.main-nav-link--active {
+  color: #1a5f1a !important;
+}
+
+.main-nav-link--active {
+  font-weight: 600;
+}
+
+.main-nav-link--active .main-nav-link-label::after {
+  transform: scaleX(1);
+}
+
+.nav-account {
+  display: flex;
+  align-items: center;
+}
+
 .account-avatar {
   width: 42px;
   height: 42px;
@@ -199,7 +258,53 @@ input:focus, textarea:focus {
 }
 
 @media (max-width: 991.98px) {
-  .account-avatar {
-    margin-top: 0.75rem;
+  .main-navbar-logo {
+    max-height: 56px;
+  }
+
+  .main-navbar-offcanvas {
+    width: min(84vw, 340px) !important;
+    color: #37474f;
+    background: #f6f3ee;
+    border-left: 1px solid rgba(46, 125, 50, 0.12);
+    box-shadow: -14px 0 36px rgba(38, 50, 56, 0.18);
+  }
+
+  .main-navbar-offcanvas .offcanvas-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(55, 71, 79, 0.1);
+  }
+
+  .main-navbar-offcanvas .offcanvas-title {
+    color: #1a5f1a;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .main-navbar-offcanvas .offcanvas-body {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.25rem 1.5rem;
+  }
+
+  .main-nav {
+    width: 100%;
+    align-items: stretch;
+    gap: 0.2rem;
+  }
+
+  .main-nav-link {
+    width: 100%;
+    padding: 0.8rem 0.75rem !important;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    text-align: left;
+  }
+
+  .nav-account {
+    margin-top: 1rem;
+    margin-left: 0 !important;
+    padding: 1rem 0.75rem 0;
+    border-top: 1px solid rgba(55, 71, 79, 0.1);
   }
 }
