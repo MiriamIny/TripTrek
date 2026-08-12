@@ -8,7 +8,7 @@ import { TripProvider } from '../context/TripContext'
 
 import '@testing-library/jest-dom'
 
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
  
 // Mock useParams and useNavigate
 
@@ -382,7 +382,7 @@ describe('TripDetail', () => {
  
     await waitFor(() => {
 
-      expect(screen.getByText('Paris')).toBeInTheDocument() // Header shows destination
+      expect(screen.getByRole('heading', { name: 'Paris', level: 2 })).toBeInTheDocument()
 
     })
 
@@ -412,11 +412,13 @@ describe('TripDetail', () => {
 
     expect(screen.getByDisplayValue('Paris')).toBeInTheDocument()
 
-    // Just verify that date inputs exist with some date value (any format)
+    // The custom date triggers show the saved dates in a friendly format.
 
-    const dateInputs = screen.getAllByDisplayValue(/\d/)
+    const travelDates = screen.getByLabelText('Travel dates')
 
-    expect(dateInputs.length).toBeGreaterThanOrEqual(2) // Should have at least 2 fields with numbers (dates)
+    expect(travelDates).toHaveTextContent('Jul 20, 2025')
+
+    expect(travelDates).toHaveTextContent('Jul 22, 2025')
 
   })
  

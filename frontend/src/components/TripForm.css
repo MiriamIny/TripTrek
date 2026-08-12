@@ -1,0 +1,1557 @@
+.trip-planner-form {
+  --form-green: #167b35;
+  --form-green-dark: #0d5427;
+  --form-coral: #e7765b;
+  --form-ink: #263b3d;
+  --form-muted: #647477;
+  width: 100%;
+  color: var(--form-ink);
+}
+
+.trip-planner-intro {
+  display: flex;
+  margin-bottom: 2rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.trip-planner-intro p,
+.trip-photo-content > p,
+.trip-form-summary > p {
+  margin: 0 0 0.55rem;
+  color: var(--form-green);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.trip-planner-intro h2 {
+  margin: 0;
+  color: var(--form-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.trip-planner-intro > div > span {
+  display: block;
+  max-width: 620px;
+  margin-top: 0.75rem;
+  color: var(--form-muted);
+  line-height: 1.65;
+}
+
+.trip-form-error {
+  display: flex;
+  margin-bottom: 1.4rem;
+  padding: 0.85rem 1rem;
+  color: #8f3428;
+  background: #fff3f0;
+  border: 1px solid #efc3b9;
+  border-radius: 12px;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.9rem;
+}
+
+.trip-form-error svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  flex: 0 0 auto;
+}
+
+.trip-planner-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 0.38fr);
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.trip-planner-main,
+.trip-planner-sidebar {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.trip-planner-sidebar {
+  position: sticky;
+  top: 1.5rem;
+}
+
+.trip-form-section,
+.trip-photo-card,
+.trip-form-summary {
+  background: #fff;
+  border: 1px solid rgba(38, 59, 61, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 10px 28px rgba(38, 59, 61, 0.07);
+}
+
+.trip-form-section {
+  padding: clamp(1.35rem, 3vw, 2rem);
+}
+
+.trip-form-section-heading {
+  display: flex;
+  margin-bottom: 1.6rem;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.trip-form-section-heading > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  color: var(--form-green);
+  background: #edf5ed;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.trip-form-section-heading h3,
+.trip-photo-content h3,
+.trip-form-summary h3 {
+  margin: 0;
+  color: var(--form-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.trip-form-section-heading h3 {
+  font-size: 1.45rem;
+}
+
+.trip-form-section-heading p {
+  margin: 0.28rem 0 0;
+  color: var(--form-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.trip-form-fields {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.trip-form-field--dates > small {
+  display: block;
+  margin-top: 0.45rem;
+  color: #7d8986;
+  font-size: 0.7rem;
+}
+
+.trip-form-field {
+  min-width: 0;
+}
+
+.trip-form-field > label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--form-ink);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.trip-form-input-wrap {
+  position: relative;
+}
+
+.trip-form-input-wrap > svg {
+  position: absolute;
+  top: 50%;
+  left: 0.95rem;
+  z-index: 1;
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: var(--form-green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.55;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.trip-form-input-wrap input,
+.trip-form-activity-field input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0.82rem 0.95rem;
+  color: var(--form-ink);
+  background: #fbfcfa;
+  border: 1px solid #cbd5d0;
+  border-radius: 11px;
+  font: inherit;
+  line-height: 1.5;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.trip-form-input-wrap input {
+  padding-left: 2.85rem;
+}
+
+.trip-form-input-wrap input::placeholder,
+.trip-form-activity-field input::placeholder {
+  color: #8a9794;
+}
+
+.trip-form-input-wrap input:hover,
+.trip-form-activity-field input:hover {
+  border-color: #aebdb6;
+}
+
+.trip-form-input-wrap input:focus,
+.trip-form-activity-field input:focus {
+  background: #fff;
+  border-color: var(--form-green);
+  box-shadow: 0 0 0 3px rgba(22, 123, 53, 0.12);
+  outline: none;
+}
+
+.trip-form-field .react-datepicker-wrapper,
+.trip-form-field .react-datepicker__input-container {
+  display: block;
+  width: 100%;
+}
+
+.trip-date-trigger {
+  display: grid;
+  width: 100%;
+  min-height: 50px;
+  padding: 0.75rem 0.9rem;
+  color: #8a9794;
+  background: #fbfcfa;
+  border: 1px solid #cbd5d0;
+  border-radius: 11px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.trip-date-trigger.has-value {
+  color: var(--form-ink);
+}
+
+.trip-date-trigger:hover {
+  border-color: #aebdb6;
+}
+
+.trip-date-trigger:focus-visible,
+.trip-date-trigger[aria-expanded='true'] {
+  background: #fff;
+  border-color: var(--form-green);
+  box-shadow: 0 0 0 3px rgba(22, 123, 53, 0.12);
+  outline: none;
+}
+
+.trip-date-trigger-icon,
+.trip-date-trigger-chevron {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: var(--form-green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
+.trip-date-trigger-chevron {
+  width: 16px;
+  height: 16px;
+  stroke: #72817c;
+}
+
+.trip-calendar-popper {
+  z-index: 30 !important;
+  padding-top: 0.45rem !important;
+}
+
+.trip-calendar.react-datepicker {
+  overflow: hidden;
+  color: var(--form-ink);
+  background: #fff;
+  border: 1px solid rgba(38, 59, 61, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 18px 46px rgba(38, 59, 61, 0.18);
+  font-family: inherit;
+}
+
+.trip-calendar .react-datepicker__header {
+  padding: 1rem 0.8rem 0.55rem;
+  background: #f3f7f2;
+  border-bottom: 1px solid rgba(38, 59, 61, 0.08);
+}
+
+.trip-calendar .react-datepicker__month-container + .react-datepicker__month-container {
+  border-left: 1px solid rgba(38, 59, 61, 0.08);
+}
+
+.trip-calendar .react-datepicker__current-month {
+  color: var(--form-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.trip-calendar .react-datepicker__day-names {
+  margin-top: 0.75rem;
+}
+
+.trip-calendar .react-datepicker__day-name {
+  color: #71807c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.trip-calendar .react-datepicker__month {
+  margin: 0.65rem 0.8rem 0.8rem;
+}
+
+.trip-calendar .react-datepicker__day,
+.trip-calendar .react-datepicker__day-name {
+  width: 2rem;
+  line-height: 2rem;
+  margin: 0.08rem;
+}
+
+.trip-calendar .react-datepicker__day {
+  color: var(--form-ink);
+  border-radius: 50%;
+  font-size: 0.78rem;
+}
+
+.trip-calendar .react-datepicker__day:hover {
+  color: var(--form-green-dark);
+  background: #eaf4eb;
+}
+
+.trip-calendar .react-datepicker__day--keyboard-selected {
+  color: var(--form-green-dark);
+  background: #eaf4eb;
+}
+
+.trip-calendar .react-datepicker__day--selected,
+.trip-calendar .react-datepicker__day--selected:hover {
+  color: #fff;
+  background: var(--form-green);
+  font-weight: 800;
+}
+
+.trip-calendar .react-datepicker__day--in-range,
+.trip-calendar .react-datepicker__day--in-selecting-range {
+  color: var(--form-green-dark);
+  background: #dcebdd;
+  border-radius: 5px;
+}
+
+.trip-calendar .react-datepicker__day--range-start,
+.trip-calendar .react-datepicker__day--range-end,
+.trip-calendar .react-datepicker__day--selecting-range-start,
+.trip-calendar .react-datepicker__day--selecting-range-end {
+  color: #fff;
+  background: var(--form-green);
+  border-radius: 50%;
+  font-weight: 800;
+}
+
+.trip-calendar .react-datepicker__header__dropdown {
+  margin-top: 0.55rem;
+}
+
+.trip-calendar .react-datepicker__month-dropdown-container,
+.trip-calendar .react-datepicker__year-dropdown-container {
+  margin: 0 0.2rem;
+}
+
+.trip-calendar .react-datepicker__month-select,
+.trip-calendar .react-datepicker__year-select {
+  padding: 0.28rem 1.55rem 0.28rem 0.5rem;
+  color: var(--form-ink);
+  background-color: #fff;
+  border: 1px solid #c4d0ca;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trip-calendar .react-datepicker__day--today:not(.react-datepicker__day--selected) {
+  color: var(--form-coral);
+  box-shadow: inset 0 0 0 1px var(--form-coral);
+  font-weight: 800;
+}
+
+.trip-calendar .react-datepicker__day--outside-month {
+  color: #bdc5c2;
+}
+
+.trip-calendar .react-datepicker__day--disabled,
+.trip-calendar .react-datepicker__day--disabled:hover {
+  color: #ccd2d0;
+  background: transparent;
+}
+
+.trip-calendar .react-datepicker__navigation {
+  top: 0.88rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.trip-calendar .react-datepicker__navigation:hover {
+  background: #e5eee5;
+}
+
+.trip-calendar .react-datepicker__navigation-icon::before {
+  width: 7px;
+  height: 7px;
+  border-color: var(--form-green);
+  border-width: 1.5px 1.5px 0 0;
+}
+
+.trip-form-itinerary-placeholder {
+  display: flex;
+  min-height: 150px;
+  padding: 1.5rem;
+  color: var(--form-muted);
+  background: #f7f8f5;
+  border: 1px dashed #bdc9c1;
+  border-radius: 14px;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: left;
+}
+
+.trip-form-itinerary-placeholder > svg {
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: var(--form-green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.3;
+  flex: 0 0 auto;
+}
+
+.trip-form-itinerary-placeholder h4,
+.trip-form-itinerary-placeholder p {
+  margin: 0;
+}
+
+.trip-form-itinerary-placeholder h4 {
+  color: var(--form-ink);
+  font-size: 0.98rem;
+}
+
+.trip-form-itinerary-placeholder p {
+  margin-top: 0.3rem;
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.trip-form-days {
+  display: grid;
+  gap: 1rem;
+}
+
+.trip-form-day {
+  position: relative;
+  overflow: visible;
+  background: #fcfcfa;
+  border-color: rgba(38, 59, 61, 0.11) !important;
+  border-radius: 15px !important;
+}
+
+.trip-form-day-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 1rem 1.1rem;
+  background: #f3f7f2;
+  border-bottom: 1px solid rgba(38, 59, 61, 0.08);
+  align-items: center;
+  gap: 0.85rem;
+  border-radius: 15px 15px 0 0;
+}
+
+.trip-form-day-number {
+  padding: 0.35rem 0.55rem;
+  color: #fff;
+  background: var(--form-green);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.trip-form-day-heading h4,
+.trip-form-day-heading p {
+  margin: 0;
+}
+
+.trip-form-day-heading h4 {
+  color: var(--form-ink);
+  font-size: 0.98rem;
+  font-weight: 750;
+}
+
+.trip-form-day-heading p {
+  margin-top: 0.16rem;
+  color: var(--form-muted);
+  font-size: 0.72rem;
+}
+
+.trip-form-day-count {
+  color: var(--form-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.trip-form-activities {
+  margin: 0;
+  padding: 0.45rem 1.1rem 0;
+  list-style: none;
+}
+
+.trip-form-activities li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  min-height: 48px;
+  padding: 0.65rem 0;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.trip-form-activities li.is-flexible {
+  cursor: grab;
+}
+
+.trip-form-activities li.is-flexible:active {
+  cursor: grabbing;
+}
+
+.trip-form-activities li.is-editing {
+  display: block;
+  padding: 0.85rem 0;
+  cursor: default;
+}
+
+.trip-form-activities li + li {
+  border-top: 1px solid rgba(38, 59, 61, 0.08);
+}
+
+.trip-form-activity-time {
+  color: var(--form-green-dark);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.trip-form-activity-time.is-flexible {
+  color: #7d6b53;
+}
+
+.trip-form-activity-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--form-coral);
+  border-radius: 50%;
+}
+
+.trip-form-activity-name {
+  min-width: 0;
+  color: var(--form-ink);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.trip-form-reorder-placeholder {
+  width: 34px;
+}
+
+.trip-form-reorder-controls {
+  position: relative;
+  display: grid;
+  width: 34px;
+  place-items: center;
+}
+
+.trip-form-drag-handle {
+  display: grid;
+  width: 28px;
+  height: 32px;
+  color: #93a09b;
+  place-items: center;
+}
+
+.trip-form-drag-handle svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.trip-form-reorder-controls > div {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  padding: 0.15rem;
+  background: #fff;
+  border: 1px solid rgba(38, 59, 61, 0.12);
+  border-radius: 7px;
+  box-shadow: 0 5px 14px rgba(38, 59, 61, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(24px);
+  transition: opacity 140ms ease;
+}
+
+.trip-form-activities li:hover .trip-form-reorder-controls > div,
+.trip-form-reorder-controls:focus-within > div {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.trip-form-reorder-controls button {
+  width: 25px;
+  height: 24px;
+  padding: 0;
+  color: var(--form-green-dark);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.trip-form-reorder-controls button:hover:not(:disabled) {
+  background: #eaf4eb;
+}
+
+.trip-form-reorder-controls button:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.trip-form-activity-edit-trigger {
+  display: grid;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0.25rem 0.35rem;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  grid-template-columns: 72px 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.trip-form-activity-edit-trigger:hover,
+.trip-form-activity-edit-trigger:focus-visible {
+  background: #f1f6f1;
+  outline: none;
+}
+
+.trip-form-edit-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--form-green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.trip-form-activity-edit-trigger:hover .trip-form-edit-icon,
+.trip-form-activity-edit-trigger:focus-visible .trip-form-edit-icon {
+  opacity: 1;
+}
+
+.trip-form-activity-editor {
+  display: grid;
+  padding: 0.85rem;
+  background: #f5f8f4;
+  border: 1px solid rgba(22, 123, 53, 0.14);
+  border-radius: 12px;
+  grid-template-columns: 160px minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.65rem;
+}
+
+.trip-form-editor-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.trip-form-editor-actions button {
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  color: var(--form-muted);
+  background: #fff;
+  border: 1px solid #cbd5d0;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.trip-form-editor-actions button.is-primary {
+  color: #fff;
+  background: var(--form-green);
+  border-color: var(--form-green);
+}
+
+.trip-form-editor-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.trip-form-remove-activity {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: #788483;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  place-items: center;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.trip-form-remove-activity svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.trip-form-remove-activity:hover {
+  color: #9e3d31;
+  background: #fff0ed;
+}
+
+.trip-form-day-empty {
+  margin: 0;
+  padding: 1rem 1.1rem 0.25rem;
+  color: #7b8986;
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+.trip-form-add-activity {
+  display: grid;
+  grid-template-columns: 138px minmax(0, 1fr) auto;
+  padding: 0.85rem 1.1rem 1.1rem;
+  align-items: end;
+  gap: 0.65rem;
+}
+
+.trip-form-flexible-hint {
+  grid-column: 1 / -1;
+  margin: -0.15rem 0 0;
+  color: #7b8986;
+  font-size: 0.68rem;
+}
+
+.trip-form-mobile-label {
+  display: block;
+  margin-bottom: 0.32rem;
+  color: var(--form-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.activity-time-clock-icon {
+  width: 17px;
+  height: 17px;
+  margin-left: 0.68rem;
+  fill: none;
+  stroke: var(--form-green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+  pointer-events: none;
+}
+
+.activity-time-flexible-label {
+  margin-right: 0;
+  padding: 0.17rem 0.3rem;
+  color: #76664e;
+  background: #f4efe5;
+  border-radius: 999px;
+  font-size: 0.54rem;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.activity-time-picker {
+  position: relative;
+  width: 100%;
+}
+
+.activity-time-trigger {
+  display: grid;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.5rem;
+  color: #77837f;
+  background: #fff;
+  border: 1px solid #cbd5d0;
+  border-radius: 9px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.3rem;
+  font: inherit;
+  font-size: 0.72rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.activity-time-trigger > span {
+  white-space: nowrap;
+}
+
+.activity-time-trigger.has-value {
+  color: var(--form-ink);
+}
+
+.activity-time-trigger:hover {
+  background: #fbfcfa;
+  border-color: #aebdb6;
+}
+
+.activity-time-trigger:focus-visible,
+.activity-time-trigger.is-open {
+  background: #fff;
+  border-color: var(--form-green);
+  box-shadow: 0 0 0 3px rgba(22, 123, 53, 0.1);
+  outline: none;
+}
+
+.activity-time-trigger .activity-time-clock-icon,
+.activity-time-trigger .activity-time-chevron {
+  margin: 0;
+}
+
+.activity-time-trigger .activity-time-clock-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.activity-time-chevron {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: #75817d;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.activity-time-wheel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  width: 300px;
+  padding: 0.8rem;
+  color: var(--form-ink);
+  background: #fff;
+  border: 1px solid rgba(38, 59, 61, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 18px 46px rgba(38, 59, 61, 0.2);
+}
+
+.activity-time-wheel > header {
+  display: flex;
+  padding: 0.05rem 0.15rem 0.7rem;
+  border-bottom: 1px solid rgba(38, 59, 61, 0.08);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.activity-time-wheel > header strong,
+.activity-time-wheel > header small {
+  display: block;
+}
+
+.activity-time-wheel > header strong {
+  color: var(--form-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+.activity-time-wheel > header small {
+  margin-top: 0.12rem;
+  color: var(--form-muted);
+  font-size: 0.64rem;
+}
+
+.activity-time-wheel > header > button {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  color: #77837f;
+  background: #f2f5f1;
+  border: 0;
+  border-radius: 50%;
+  place-items: center;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.activity-time-wheel > header > button:hover {
+  color: var(--form-green-dark);
+  background: #e5f1e6;
+}
+
+.activity-time-wheel-columns {
+  display: grid;
+  padding: 0.7rem 0 0.65rem;
+  grid-template-columns: 1fr 1fr 0.9fr;
+  gap: 0.45rem;
+}
+
+.activity-time-wheel-column > span {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: #7a8783;
+  font-size: 0.61rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.activity-time-wheel-column > div {
+  height: 154px;
+  padding: 0.22rem 0;
+  overflow-y: auto;
+  background:
+    linear-gradient(#f6f8f5, rgba(246, 248, 245, 0)) top / 100% 2.5rem no-repeat,
+    linear-gradient(rgba(246, 248, 245, 0), #f6f8f5) bottom / 100% 2.5rem no-repeat,
+    #fbfcfa;
+  border: 1px solid rgba(38, 59, 61, 0.08);
+  border-radius: 10px;
+  scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
+  scrollbar-color: #a9b9b0 transparent;
+  scrollbar-width: thin;
+}
+
+.activity-time-wheel-column button {
+  display: block;
+  width: calc(100% - 0.4rem);
+  min-height: 32px;
+  margin: 0.12rem 0.2rem;
+  padding: 0.35rem 0.25rem;
+  color: #66736f;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  scroll-snap-align: center;
+  font: inherit;
+  font-size: 0.76rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.activity-time-wheel-column button:hover {
+  color: var(--form-green-dark);
+  background: #eaf4eb;
+}
+
+.activity-time-wheel-column button.is-selected {
+  color: #fff;
+  background: var(--form-green);
+  box-shadow: 0 4px 10px rgba(22, 123, 53, 0.18);
+  font-weight: 850;
+}
+
+.activity-time-wheel-period > div {
+  display: flex;
+  padding: 0.3rem;
+  align-items: stretch;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.activity-time-wheel-period button {
+  width: 100%;
+  margin: 0;
+}
+
+.activity-time-wheel > footer {
+  display: grid;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(38, 59, 61, 0.08);
+  grid-template-columns: 1fr 1.15fr;
+  gap: 0.5rem;
+}
+
+.activity-time-wheel > footer button {
+  min-height: 38px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.activity-time-no-time {
+  color: var(--form-green-dark);
+  background: #edf5ed;
+  border: 1px solid rgba(22, 123, 53, 0.14);
+}
+
+.activity-time-done {
+  color: #fff;
+  background: var(--form-coral);
+  border: 1px solid var(--form-coral);
+}
+
+.activity-time-no-time:hover {
+  background: #e1eee2;
+}
+
+.activity-time-done:hover {
+  background: #d9654d;
+  border-color: #d9654d;
+}
+
+.trip-form-activity-field input {
+  min-height: 44px;
+  border-radius: 9px;
+  font-size: 0.85rem;
+}
+
+.trip-form-add-button {
+  display: inline-flex;
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
+  color: var(--form-green-dark);
+  background: #eaf4eb;
+  border: 1px solid rgba(22, 123, 53, 0.13);
+  border-radius: 9px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.trip-form-add-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.trip-form-add-button:hover:not(:disabled) {
+  color: #fff;
+  background: var(--form-green);
+  border-color: var(--form-green);
+}
+
+.trip-form-add-button:disabled {
+  color: #89928f;
+  background: #f1f2ef;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.trip-photo-card {
+  overflow: hidden;
+}
+
+.trip-photo-preview {
+  position: relative;
+  height: 205px;
+  overflow: hidden;
+  background: #e6eee6;
+}
+
+.trip-photo-preview > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.trip-photo-placeholder {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.24), transparent 7rem),
+    linear-gradient(145deg, #185f35, #7fa987);
+  place-items: center;
+}
+
+.trip-photo-placeholder svg {
+  width: 76px;
+  height: 76px;
+  fill: none;
+  stroke: currentColor;
+  stroke-dasharray: 3 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.1;
+}
+
+.trip-photo-preparing {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  color: #fff;
+  background: rgba(13, 84, 39, 0.66);
+  backdrop-filter: blur(3px);
+  place-items: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.trip-photo-content {
+  padding: 1.25rem;
+}
+
+.trip-photo-content h3,
+.trip-form-summary h3 {
+  font-size: 1.35rem;
+}
+
+.trip-photo-content > span {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--form-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.trip-photo-upload {
+  display: inline-flex;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 1rem;
+  padding: 0.7rem 0.9rem;
+  color: var(--form-green-dark);
+  background: #edf5ed;
+  border: 1px solid rgba(22, 123, 53, 0.15);
+  border-radius: 9px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.trip-photo-upload:hover {
+  color: #fff;
+  background: var(--form-green);
+}
+
+.trip-photo-upload svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.trip-photo-native-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.trip-photo-native-input:focus-visible + small,
+.trip-photo-upload:focus-within {
+  outline: 3px solid rgba(22, 123, 53, 0.22);
+  outline-offset: 3px;
+}
+
+.trip-photo-content small {
+  display: block;
+  margin-top: 0.65rem;
+  color: #82908d;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.trip-form-summary {
+  padding: 1.25rem;
+}
+
+.trip-form-summary h3 {
+  overflow-wrap: anywhere;
+}
+
+.trip-form-summary dl {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+.trip-form-summary dl > div {
+  display: flex;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(38, 59, 61, 0.08);
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trip-form-summary dt,
+.trip-form-summary dd {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.trip-form-summary dt {
+  color: var(--form-muted);
+  font-weight: 650;
+}
+
+.trip-form-summary dd {
+  color: var(--form-ink);
+  font-weight: 750;
+  text-align: right;
+}
+
+.trip-form-actions {
+  display: flex;
+  margin-top: 1.5rem;
+  padding: 1.1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(38, 59, 61, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(38, 59, 61, 0.07);
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.trip-form-actions > p {
+  margin: 0;
+  color: var(--form-muted);
+  font-size: 0.78rem;
+}
+
+.trip-form-actions > div {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.trip-form-cancel,
+.trip-form-save {
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.trip-form-cancel {
+  color: var(--form-muted);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.trip-form-cancel:hover {
+  color: var(--form-ink);
+  background: #f1f3ef;
+}
+
+.trip-form-save {
+  display: inline-flex;
+  color: #fff;
+  background: var(--form-coral);
+  border: 0;
+  box-shadow: 0 8px 18px rgba(196, 83, 57, 0.19);
+  align-items: center;
+  gap: 0.55rem;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.trip-form-save svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.trip-form-save:hover:not(:disabled) {
+  background: #d9654d;
+  transform: translateY(-1px);
+}
+
+.trip-form-save:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.trip-form-cancel:focus-visible,
+.trip-form-save:focus-visible,
+.trip-form-add-button:focus-visible,
+.trip-form-remove-activity:focus-visible,
+.trip-photo-upload:focus-visible {
+  outline: 3px solid rgba(22, 123, 53, 0.23);
+  outline-offset: 3px;
+}
+
+@media (max-width: 960px) {
+  .trip-planner-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-planner-sidebar {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .trip-planner-intro {
+    margin-bottom: 1.5rem;
+  }
+
+  .trip-form-section {
+    padding: 1.15rem;
+    border-radius: 16px;
+  }
+
+  .trip-planner-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-form-add-activity {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-form-activity-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-form-editor-actions {
+    justify-content: flex-end;
+  }
+
+  .trip-form-add-button {
+    width: 100%;
+  }
+
+  .trip-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trip-form-actions > p {
+    text-align: center;
+  }
+
+  .trip-form-actions > div {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+  }
+
+  .trip-form-cancel,
+  .trip-form-save {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 430px) {
+  .trip-form-section {
+    padding-right: 0.85rem;
+    padding-left: 0.85rem;
+  }
+
+  .trip-form-day-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding-right: 0.8rem;
+    padding-left: 0.8rem;
+  }
+
+  .trip-form-day-count {
+    display: none;
+  }
+
+  .trip-form-activities {
+    padding-right: 0.55rem;
+    padding-left: 0;
+  }
+
+  .trip-form-activities li {
+    grid-template-columns: 23px minmax(0, 1fr) 27px;
+    gap: 0.2rem;
+  }
+
+  .trip-form-reorder-placeholder,
+  .trip-form-reorder-controls {
+    width: 23px;
+  }
+
+  .trip-form-drag-handle {
+    width: 23px;
+  }
+
+  .trip-form-drag-handle svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .trip-form-activity-edit-trigger {
+    padding-right: 0.2rem;
+    padding-left: 0;
+    grid-template-columns: 49px 6px minmax(0, 1fr);
+    gap: 0.28rem;
+  }
+
+  .trip-form-activity-edit-trigger .trip-form-edit-icon {
+    display: none;
+  }
+
+  .trip-form-activity-time {
+    font-size: 0.65rem;
+    white-space: nowrap;
+  }
+
+  .trip-form-activity-name {
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .trip-form-remove-activity {
+    width: 27px;
+    height: 27px;
+  }
+
+  .trip-form-add-activity {
+    padding-right: 0.6rem;
+    padding-left: 0;
+    grid-template-columns: 92px minmax(0, 1fr);
+    column-gap: 0.45rem;
+  }
+
+  .trip-form-add-activity .trip-form-time-field,
+  .trip-form-activity-editor .trip-form-time-field {
+    min-width: 0;
+    padding-left: 0;
+  }
+
+  .activity-time-trigger {
+    min-height: 42px;
+    padding-right: 0.28rem;
+    padding-left: 0.3rem;
+    gap: 0.18rem;
+    font-size: 0.66rem;
+  }
+
+  .activity-time-trigger .activity-time-clock-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .activity-time-trigger .activity-time-flexible-label {
+    display: none;
+  }
+
+  .activity-time-trigger .activity-time-chevron {
+    width: 11px;
+    height: 11px;
+  }
+
+  .trip-form-add-button,
+  .trip-form-flexible-hint {
+    grid-column: 1 / -1;
+  }
+
+  .trip-form-activity-editor {
+    padding: 0.6rem;
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  .trip-form-editor-actions {
+    grid-column: 1 / -1;
+  }
+
+  .activity-time-wheel {
+    width: min(300px, calc(100vw - 3.5rem));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trip-form-input-wrap input,
+  .trip-form-activity-field input,
+  .trip-form-add-button,
+  .trip-form-remove-activity,
+  .trip-photo-upload,
+  .trip-form-save {
+    transition: none;
+  }
+}

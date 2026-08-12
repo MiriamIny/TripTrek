@@ -1,26 +1,52 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import TripForm from './TripForm';
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock URL.createObjectURL and revokeObjectURL
-global.URL.createObjectURL = vi.fn(() => 'mock-object-url');
-global.URL.revokeObjectURL = vi.fn();
+globalThis.URL.createObjectURL = vi.fn(() => 'mock-object-url');
+globalThis.URL.revokeObjectURL = vi.fn();
 
-// Mock react-time-picker
-vi.mock('react-time-picker', () => ({
+// Keep date and time controls deterministic in jsdom while exercising TripForm state changes.
+vi.mock('./ActivityTimeSelect', () => ({
   __esModule: true,
-  default: ({ value, onChange }) => (
+  default: ({ value, onChange, ariaLabel }) => (
     <input
       data-testid="mock-time-picker"
+      aria-label={ariaLabel}
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
     />
   ),
 }));
 
-// Mock CSS imports
-vi.mock('react-time-picker/dist/TimePicker.css', () => ({}));
-vi.mock('react-clock/dist/Clock.css', () => ({}));
+vi.mock('./TripDatePicker', () => ({
+  __esModule: true,
+  default: ({ id, startDate, endDate, onChange }) => {
+    const toIso = (date) => {
+      if (!date) return '';
+      const [month, day, year] = date.split('/');
+      return `${year}-${month}-${day}`;
+    };
+    const fromIso = (date) => date ? `${date.slice(5, 7)}/${date.slice(8, 10)}/${date.slice(0, 4)}` : '';
+    return (
+      <>
+        <input
+          id={id}
+          type="date"
+          value={toIso(startDate)}
+          onChange={(event) => onChange(fromIso(event.target.value), endDate)}
+        />
+        <input
+          aria-label="Mock end date"
+          type="date"
+          value={toIso(endDate)}
+          min={toIso(startDate)}
+          onChange={(event) => onChange(startDate, fromIso(event.target.value))}
+        />
+      </>
+    );
+  },
+}));
 
 // Mock image compression
 vi.mock('browser-image-compression', () => ({
@@ -64,7 +90,7 @@ describe('TripForm', () => {
     
     expect(screen.getByDisplayValue('Paris')).toBeInTheDocument();
     expect(screen.getByText('07/20/2025')).toBeInTheDocument();
-    expect(screen.getByText(/Museum Visit/)).toBeInTheDocument();
+    expect(screen.getByText('Museum Visit')).toBeInTheDocument();
   });
 
   it('renders with empty trip object', () => {
@@ -89,7 +115,7 @@ describe('TripForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
     
     await waitFor(() => {
-      expect(screen.getByText(/Please fill in all fields/)).toBeInTheDocument();
+      expect(screen.getByText(/Please add a destination and both travel dates/)).toBeInTheDocument();
     });
   });
 
@@ -125,7 +151,9 @@ describe('TripForm', () => {
     fireEvent.change(endDateInput, { target: { value: '2025-07-20' } });
 
     await waitFor(() => {
-      expect(screen.queryByText('Itinerary')).not.toBeInTheDocument();
+      expect(screen.getByText('Itinerary')).toBeInTheDocument();
+      expect(screen.getByText('Your days will appear here.')).toBeInTheDocument();
+      expect(document.querySelectorAll('.trip-form-day')).toHaveLength(0);
     });
   });
 
@@ -151,7 +179,7 @@ describe('TripForm', () => {
 
     await waitFor(() => {
       // Original activity should still be there
-      expect(screen.getByText(/Breakfast/)).toBeInTheDocument();
+      expect(screen.getByText('Breakfast')).toBeInTheDocument();
       // New day should be added
       expect(screen.getByText('07/22/2025')).toBeInTheDocument();
     });
@@ -165,10 +193,11 @@ describe('TripForm', () => {
 
     fireEvent.change(timeInput, { target: { value: '11:00' } });
     fireEvent.change(activityInput, { target: { value: 'Lunch' } });
-    fireEvent.click(screen.getAllByText('+ Add Activity')[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add Activity' })[0]);
 
     await waitFor(() => {
-      expect(screen.getByText(/11:00 AM — Lunch/)).toBeInTheDocument();
+      const lunch = screen.getByText('Lunch').closest('li');
+      expect(within(lunch).getByText('11:00 AM')).toBeInTheDocument();
     });
 
     // Check that inputs are cleared after adding
@@ -194,13 +223,15 @@ describe('TripForm', () => {
     // Add an earlier activity
     fireEvent.change(timeInput, { target: { value: '09:00' } });
     fireEvent.change(activityInput, { target: { value: 'Breakfast' } });
-    fireEvent.click(screen.getByText('+ Add Activity'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Activity' }));
 
     await waitFor(() => {
-      const activities = screen.getAllByText(/AM|PM/);
+      const activities = screen.getAllByRole('listitem');
       // Breakfast (9:00 AM) should appear before Lunch (2:00 PM)
-      expect(activities[0]).toHaveTextContent('9:00 AM — Breakfast');
-      expect(activities[1]).toHaveTextContent('2:00 PM — Lunch');
+      expect(activities[0]).toHaveTextContent('9:00 AM');
+      expect(activities[0]).toHaveTextContent('Breakfast');
+      expect(activities[1]).toHaveTextContent('2:00 PM');
+      expect(activities[1]).toHaveTextContent('Lunch');
     });
   });
 
@@ -210,29 +241,91 @@ describe('TripForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /remove/i }));
     
     await waitFor(() =>
-      expect(screen.queryByText(/Museum Visit/)).not.toBeInTheDocument()
+      expect(screen.queryByText('Museum Visit')).not.toBeInTheDocument()
     );
   });
 
-  it('does not add activity if time or name is missing', () => {
+  it('allows an activity without a time but still requires a name', () => {
     render(<TripForm trip={mockTrip} onSave={vi.fn()} onCancel={vi.fn()} />);
 
-    const addBtn = screen.getAllByText('+ Add Activity')[0];
+    const addBtn = screen.getAllByRole('button', { name: 'Add Activity' })[0];
     const timeInput = screen.getAllByTestId('mock-time-picker')[0];
     const nameInput = screen.getAllByPlaceholderText('Activity Description')[0];
 
-    // Missing time
+    // A missing time creates a flexible activity.
     fireEvent.change(nameInput, { target: { value: 'No time activity' } });
     fireEvent.click(addBtn);
-    expect(screen.queryByText(/No time activity/)).not.toBeInTheDocument();
+    expect(screen.getByText('No time activity')).toBeInTheDocument();
+    expect(screen.getByText('Flexible')).toBeInTheDocument();
 
-    // Reset input
-    fireEvent.change(nameInput, { target: { value: '' } });
-
-    // Missing name
+    // A time by itself is not enough to create an activity.
     fireEvent.change(timeInput, { target: { value: '10:30' } });
     fireEvent.click(addBtn);
     expect(screen.queryByText(/10:30/)).not.toBeInTheDocument();
+  });
+
+  it('edits an existing activity inline, including removing its time', async () => {
+    render(<TripForm trip={mockTrip} onSave={vi.fn()} onCancel={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Museum Visit' }));
+    fireEvent.change(screen.getByLabelText('Edit time for Museum Visit'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Activity'), { target: { value: 'Explore the museum' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Explore the museum')).toBeInTheDocument();
+      expect(screen.getByText('Flexible')).toBeInTheDocument();
+      expect(screen.queryByText('Museum Visit')).not.toBeInTheDocument();
+    });
+  });
+
+  it('reorders only flexible activities with accessible move controls', () => {
+    const flexibleTrip = {
+      destination: 'Lisbon',
+      startDate: '07/20/2025',
+      endDate: '07/20/2025',
+      itinerary: [{
+        date: '07/20/2025',
+        activities: [
+          { time: '9:00 AM', name: 'Breakfast' },
+          { time: '', name: 'Browse the market' },
+          { time: '', name: 'Walk the waterfront' },
+        ],
+      }],
+    };
+
+    render(<TripForm trip={flexibleTrip} onSave={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Move Breakfast earlier' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move Walk the waterfront earlier' }));
+    const activities = screen.getAllByRole('listitem');
+    expect(activities[0]).toHaveTextContent('Breakfast');
+    expect(activities[1]).toHaveTextContent('Walk the waterfront');
+    expect(activities[2]).toHaveTextContent('Browse the market');
+  });
+
+  it('places flexible activities between timed activities without changing timed order', () => {
+    const mixedTrip = {
+      destination: 'Lisbon',
+      startDate: '07/20/2025',
+      endDate: '07/20/2025',
+      itinerary: [{
+        date: '07/20/2025',
+        activities: [
+          { time: '9:00 AM', name: 'Breakfast' },
+          { time: '2:00 PM', name: 'Museum' },
+          { time: '', name: 'Walk around' },
+        ],
+      }],
+    };
+
+    render(<TripForm trip={mixedTrip} onSave={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Move Walk around earlier' }));
+
+    const activities = screen.getAllByRole('listitem');
+    expect(activities[0]).toHaveTextContent('9:00 AM');
+    expect(activities[1]).toHaveTextContent('Walk around');
+    expect(activities[2]).toHaveTextContent('2:00 PM');
   });
 
   it('adds activity only to the matching day', async () => {
@@ -255,19 +348,19 @@ describe('TripForm', () => {
     // Add activity to second day only
     const timePickers = screen.getAllByTestId('mock-time-picker');
     const nameInputs = screen.getAllByPlaceholderText('Activity Description');
-    const addButtons = screen.getAllByText('+ Add Activity');
+    const addButtons = screen.getAllByRole('button', { name: 'Add Activity' });
 
     fireEvent.change(timePickers[1], { target: { value: '14:00' } });
     fireEvent.change(nameInputs[1], { target: { value: 'Forum Visit' } });
     fireEvent.click(addButtons[1]);
 
     await waitFor(() => {
-      expect(screen.getByText(/Forum Visit/)).toBeInTheDocument();
+      expect(screen.getByText('Forum Visit')).toBeInTheDocument();
     });
 
     // Verify activity is only in day 2
-    const day1Activities = within(day1Section).queryAllByText(/Forum Visit/);
-    const day2Activities = within(day2Section).queryAllByText(/Forum Visit/);
+    const day1Activities = within(day1Section).queryAllByText('Forum Visit');
+    const day2Activities = within(day2Section).queryAllByText('Forum Visit');
 
     expect(day1Activities.length).toBe(0);
     expect(day2Activities.length).toBe(1);
