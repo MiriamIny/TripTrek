@@ -23,10 +23,13 @@ describe('ContactUs component', () => {
     expect(screen.getByRole('button', { name: /send message/i })).toBeInTheDocument();
   });
 
-  it('offers the expected contact topics', () => {
+  it('offers the expected contact topics', async () => {
     render(<ContactUs />);
+    const user = userEvent.setup();
 
-    expect(screen.getByRole('option', { name: /trip planning/i })).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/what can we help with/i));
+
+    expect(screen.getByRole('option', { name: /trip planning/i })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('option', { name: /account and sign-in/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /feedback or an idea/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /something else/i })).toBeInTheDocument();
@@ -43,12 +46,14 @@ describe('ContactUs component', () => {
 
     await user.type(nameInput, 'Jane Doe');
     await user.type(emailInput, 'jane@example.com');
-    await user.selectOptions(subjectInput, 'planning');
+    await user.click(subjectInput);
+    await user.click(screen.getByRole('option', { name: /trip planning/i }));
     await user.type(messageInput, 'I would like help planning a trip.');
 
     expect(nameInput).toHaveValue('Jane Doe');
     expect(emailInput).toHaveValue('jane@example.com');
-    expect(subjectInput).toHaveValue('planning');
+    expect(subjectInput).toHaveTextContent('Trip planning');
+    expect(document.querySelector('input[name="subject"]')).toHaveValue('planning');
     expect(messageInput).toHaveValue('I would like help planning a trip.');
   });
 });

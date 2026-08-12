@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import './ContactUs.css';
 
 const contactTopics = [
@@ -14,6 +15,85 @@ const contactTopics = [
     description: 'A feature request or thought that could improve TripTrek.',
   },
 ];
+
+const subjectOptions = [
+  { value: 'planning', label: 'Trip planning' },
+  { value: 'account', label: 'Account and sign-in' },
+  { value: 'feedback', label: 'Feedback or an idea' },
+  { value: 'other', label: 'Something else' },
+];
+
+function ContactTopicSelect() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState('');
+  const selectRef = useRef(null);
+  const selectedOption = subjectOptions.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const closeOnOutsideClick = (event) => {
+      if (!selectRef.current?.contains(event.target)) setIsOpen(false);
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+  }, [isOpen]);
+
+  const chooseOption = (option) => {
+    setValue(option.value);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="contact-select-wrap" ref={selectRef}>
+      <input type="hidden" name="subject" value={value} />
+      <button
+        type="button"
+        id="contact-subject"
+        className={`contact-select-trigger${value ? '' : ' is-placeholder'}`}
+        aria-labelledby="contact-subject-label contact-subject-value"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls="contact-subject-options"
+        aria-required="true"
+        onClick={() => setIsOpen((open) => !open)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            setIsOpen(true);
+          }
+          if (event.key === 'Escape') setIsOpen(false);
+        }}
+      >
+        <span id="contact-subject-value">{selectedOption?.label ?? 'Choose a topic'}</span>
+        <span className="contact-select-chevron" aria-hidden="true" />
+      </button>
+
+      {isOpen && (
+        <ul id="contact-subject-options" className="contact-select-options" role="listbox">
+          {subjectOptions.map((option) => (
+            <li key={option.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={value === option.value}
+                onClick={() => chooseOption(option)}
+              >
+                <span>{option.label}</span>
+                {value === option.value && (
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m6 12 4 4 8-8" />
+                  </svg>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function ContactUs() {
   return (
@@ -81,16 +161,8 @@ function ContactUs() {
             </div>
 
             <div className="contact-field">
-              <label htmlFor="contact-subject">What can we help with?</label>
-              <div className="contact-select-wrap">
-                <select id="contact-subject" name="subject" defaultValue="" required>
-                  <option value="" disabled>Choose a topic</option>
-                  <option value="planning">Trip planning</option>
-                  <option value="account">Account and sign-in</option>
-                  <option value="feedback">Feedback or an idea</option>
-                  <option value="other">Something else</option>
-                </select>
-              </div>
+              <label id="contact-subject-label">What can we help with?</label>
+              <ContactTopicSelect />
             </div>
 
             <div className="contact-field">
