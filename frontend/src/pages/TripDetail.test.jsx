@@ -228,7 +228,7 @@ describe('TripDetail', () => {
  
     // Check trip destination and dates
 
-    expect(screen.getByText('07/20/2025 — 07/22/2025')).toBeInTheDocument()
+    expect(screen.getByText('Jul 20 – 22, 2025')).toBeInTheDocument()
  
     // Check itinerary days
 
@@ -300,11 +300,11 @@ describe('TripDetail', () => {
  
     await waitFor(() => {
 
-      expect(screen.getByText('← Back to Trips')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Back to Trips' })).toBeInTheDocument()
 
     })
  
-    fireEvent.click(screen.getByText('← Back to Trips'))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Trips' }))
 
     expect(mockNavigate).toHaveBeenCalledWith('/trips')
 
@@ -382,7 +382,7 @@ describe('TripDetail', () => {
  
     await waitFor(() => {
 
-      expect(screen.getByRole('heading', { name: 'Paris', level: 2 })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Paris', level: 1 })).toBeInTheDocument()
 
     })
 
