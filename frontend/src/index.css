@@ -67,3 +67,139 @@ input:focus, textarea:focus {
   box-shadow: 0 0 0 0.2rem rgba(129, 212, 250, 0.25);
   outline: none;
 }
+
+/* ===== Account Navigation ===== */
+.account-avatar {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #1a5f1a;
+  border: 2px solid #e0e0e0;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.account-avatar-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.account-avatar:focus-visible {
+  outline: 3px solid rgba(46, 125, 50, 0.3);
+  outline-offset: 3px;
+}
+
+.account-avatar--guest {
+  appearance: none;
+  position: relative;
+  padding: 0;
+  color: #1a5f1a;
+  background: #fff;
+  border-color: #2e7d32;
+  font: inherit;
+  overflow: visible;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.account-avatar--guest svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.account-avatar--guest:hover {
+  color: #fff;
+  background: #2e7d32;
+}
+
+.guest-account-tooltip {
+  z-index: 2000;
+}
+
+.guest-account-tooltip .tooltip-inner {
+  max-width: 190px;
+  padding: 0.4rem 0.6rem;
+  background: #263238;
+  border-radius: 6px;
+  box-shadow: 0 5px 16px rgba(38, 50, 56, 0.2);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+/* ===== Guest Trips State ===== */
+.trips-guest {
+  min-height: calc(100vh - 105px);
+  display: grid;
+  place-items: center;
+  padding: 4rem 1rem;
+}
+
+.trips-guest-card {
+  width: min(100%, 620px);
+  padding: clamp(2rem, 6vw, 3.5rem);
+  text-align: center;
+  background: #fff;
+  border: 1px solid rgba(46, 125, 50, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 14px 35px rgba(55, 71, 79, 0.12);
+}
+
+.trips-guest-icon {
+  width: 70px;
+  height: 70px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 1.5rem;
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.1);
+  border-radius: 50%;
+}
+
+.trips-guest-icon svg {
+  width: 36px;
+  height: 36px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.trips-guest-card h1 {
+  margin-bottom: 1rem;
+  color: #2e7d32;
+  font-size: clamp(1.8rem, 4vw, 2.35rem);
+  font-weight: 700;
+}
+
+.trips-guest-card p {
+  max-width: 500px;
+  margin: 0 auto 1.75rem;
+  color: #526169;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.trips-auth-button {
+  padding: 0.8rem 1.4rem;
+  font-weight: 600;
+}
+
+@media (max-width: 991.98px) {
+  .account-avatar {
+    margin-top: 0.75rem;
+  }
+}

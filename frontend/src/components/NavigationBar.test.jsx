@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, beforeEach, test, expect, vi, it } from 'vitest';
+import { describe, beforeEach, test, expect, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import NavigationBar from './NavigationBar';
 import { useAuth } from '../context/AuthContext';
@@ -23,8 +23,14 @@ describe('NavigationBar', () => {
     // Default mock implementation
     useAuth.mockReturnValue({
       user: {
-        username: 'testuser'
+        userId: 'generated-cognito-id'
       },
+      userAttributes: {
+        name: 'Jane Doe',
+        email: 'jane@example.com'
+      },
+      isAuthenticated: true,
+      openAuth: vi.fn(),
       signOut: mockSignOut
     });
   });
@@ -53,28 +59,52 @@ describe('NavigationBar', () => {
     expect(screen.getByText('Contact Us')).toBeInTheDocument();
   });
 
-  test('renders user avatar with first letter of username', () => {
+  test('renders user avatar with first letter of name', () => {
     renderNavigationBar();
    
-    const avatar = screen.getByText('T'); // First letter of 'testuser'
+    const avatar = screen.getByText('J');
     expect(avatar).toBeInTheDocument();
   });
 
-  test('displays username in dropdown header', () => {
+  test('uses a mapped Google profile picture when available', () => {
+    useAuth.mockReturnValue({
+      user: { userId: 'google-user' },
+      userAttributes: {
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        picture: 'https://example.com/jane.jpg'
+      },
+      isAuthenticated: true,
+      openAuth: vi.fn(),
+      signOut: mockSignOut
+    });
+
+    renderNavigationBar();
+
+    expect(document.querySelector('.account-avatar-image')).toHaveAttribute(
+      'src',
+      'https://example.com/jane.jpg'
+    );
+    expect(screen.queryByText('J')).not.toBeInTheDocument();
+  });
+
+  test('displays name and email in dropdown header', () => {
     renderNavigationBar();
    
     // Click on the avatar to open dropdown
-    const avatar = screen.getByText('T');
+    const avatar = screen.getByText('J');
     fireEvent.click(avatar);
    
-    expect(screen.getByText('testuser')).toBeInTheDocument();
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.getByText('jane@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('generated-cognito-id')).not.toBeInTheDocument();
   });
 
   test('renders sign out option in dropdown', () => {
     renderNavigationBar();
    
     // Click on the avatar to open dropdown
-    const avatar = screen.getByText('T');
+    const avatar = screen.getByText('J');
     fireEvent.click(avatar);
    
     expect(screen.getByText('Sign Out')).toBeInTheDocument();
@@ -84,7 +114,7 @@ describe('NavigationBar', () => {
     renderNavigationBar();
    
     // Click on the avatar to open dropdown
-    const avatar = screen.getByText('T');
+    const avatar = screen.getByText('J');
     fireEvent.click(avatar);
    
     // Click sign out
@@ -94,60 +124,86 @@ describe('NavigationBar', () => {
     expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
-  test('handles user with email as loginId', () => {
+  test('uses email loginId when profile attributes are unavailable', () => {
     useAuth.mockReturnValue({
       user: {
         signInDetails: {
           loginId: 'user@example.com'
         }
       },
+      isAuthenticated: true,
+      openAuth: vi.fn(),
       signOut: mockSignOut
     });
 
     renderNavigationBar();
    
-    const avatar = screen.getByText('U'); // First letter of 'user@example.com'
+    const avatar = screen.getByText('U');
     expect(avatar).toBeInTheDocument();
    
-    // Click to open dropdown and check username display
     fireEvent.click(avatar);
+    expect(screen.getByText('user')).toBeInTheDocument();
     expect(screen.getByText('user@example.com')).toBeInTheDocument();
   });
 
-  test('handles user with attributes.email', () => {
+  test('supports attributes already present on the user object', () => {
     useAuth.mockReturnValue({
       user: {
         attributes: {
+          name: 'Taylor Smith',
           email: 'test@example.com'
         }
       },
+      isAuthenticated: true,
+      openAuth: vi.fn(),
       signOut: mockSignOut
     });
 
     renderNavigationBar();
    
-    const avatar = screen.getByText('T'); // First letter of 'test@example.com'
+    const avatar = screen.getByText('T');
     expect(avatar).toBeInTheDocument();
    
-    // Click to open dropdown and check username display
     fireEvent.click(avatar);
+    expect(screen.getByText('Taylor Smith')).toBeInTheDocument();
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
   });
 
-  test('handles user with no username (defaults to "User")', () => {
+  test('handles a user with no profile fields', () => {
     useAuth.mockReturnValue({
       user: {},
+      isAuthenticated: true,
+      openAuth: vi.fn(),
       signOut: mockSignOut
     });
 
     renderNavigationBar();
    
-    const avatar = screen.getByText('U'); // First letter of 'User'
+    const avatar = screen.getByText('U');
     expect(avatar).toBeInTheDocument();
    
-    // Click to open dropdown and check username display
     fireEvent.click(avatar);
     expect(screen.getByText('User')).toBeInTheDocument();
+  });
+
+  test('shows a sign-in control for guests', () => {
+    const openAuth = vi.fn();
+    useAuth.mockReturnValue({
+      user: undefined,
+      isAuthenticated: false,
+      openAuth,
+      signOut: mockSignOut
+    });
+
+    renderNavigationBar();
+
+    const accountButton = screen.getByRole('button', { name: 'Sign in or create account' });
+    expect(accountButton).toHaveClass('account-avatar--guest');
+    expect(screen.queryByText('Sign In')).not.toBeInTheDocument();
+
+    fireEvent.click(accountButton);
+    expect(openAuth).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Jane Doe')).not.toBeInTheDocument();
   });
 
   test('navigation links have correct href attributes', () => {
