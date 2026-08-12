@@ -1,11 +1,26 @@
-// src/componenets/chatbot/Chatbot.jsx
-import { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useTripContext } from '../../context/TripContext'
+import { useAuth } from '../../context/AuthContext'
 import './Chatbot.css'
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY
-const FINETUNED_MODEL_ID = "ft:gpt-3.5-turbo-0125:personal:trekka:C1G5p4GH";
+const FINETUNED_MODEL_ID = 'ft:gpt-3.5-turbo-0125:personal:trekka:C1G5p4GH'
+const DEFAULT_SUGGESTIONS = [
+  'Find me a budget-friendly getaway',
+  'Show me underrated travel spots',
+  'Surprise me with a destination',
+]
+const INTRO_MESSAGE = "Hi! I'm Trekka, your travel-planning assistant. Ask me where to go, what to pack, or how to shape your itinerary."
+
+function SendIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m4 4 17 8-17 8 3.2-8L4 4Z" />
+      <path d="M7.2 12H21" />
+    </svg>
+  )
+}
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -17,188 +32,122 @@ const Chatbot = () => {
   const [hasShownIntro, setHasShownIntro] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const messagesEndRef = useRef(null)
-  
+  const inputRef = useRef(null)
+  const streamTimerRef = useRef(null)
+  const followupTripRef = useRef(null)
+  const location = useLocation()
   const { getTripById } = useTripContext()
-  const location = useLocation();
-  const [tripId, setTripId] = useState(null);
-  const [tripData, setTripData] = useState(null)
+  const { isAuthenticated, userAttributes } = useAuth()
 
-  useEffect(() => {
-    const match = location.pathname.match(/^\/trips\/([^/]+)/);
-    const currentTripId = match ? match[1] : null;
-    setTripId(currentTripId);
-  }, [location]);
+  const tripId = location.pathname.match(/^\/trips\/([^/]+)/)?.[1] || null
+  const tripData = tripId ? getTripById(tripId) : null
+  const profilePicture = isAuthenticated && typeof userAttributes?.picture === 'string'
+    ? userAttributes.picture
+    : ''
+  const fullProfileName = isAuthenticated && typeof userAttributes?.name === 'string'
+    ? userAttributes.name.trim()
+    : ''
+  const profileName = fullProfileName ? fullProfileName.split(/\s+/)[0] : 'You'
+  const profileInitial = isAuthenticated
+    ? (profileName !== 'You' ? profileName : userAttributes?.email || 'You').trim().charAt(0).toUpperCase()
+    : 'You'
 
-  useEffect(() => {
-    if (tripId) {
-      const currentTrip = getTripById(tripId);
-      setTripData(currentTrip);
-    } else {
-      setTripData(null);
-    }
-  }, [tripId, getTripById]);
-
-  // Scroll to bottom whenever messages change or streaming updates
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const showIntro = () => {
+    if (hasShownIntro || messages.length > 0) return
+    setMessages([{ sender: 'bot', text: INTRO_MESSAGE }])
+    setSuggestions(DEFAULT_SUGGESTIONS)
+    setHasShownIntro(true)
   }
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, streamedMessage])
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, streamedMessage, suggestions])
 
-
-  // Check if user is on trips page to auto-show intro
   useEffect(() => {
-    const checkForTripsPage = () => {
-      const isOnTripsPage = window.location.pathname.includes('trip') || 
-                           window.location.pathname.includes('Trip') ||
-                           window.location.hash.includes('trip') ||
-                           window.location.hash.includes('Trip')
-      
-      if (isOnTripsPage && !hasShownIntro && messages.length === 0) {
-        setMessages([
-          {
-            sender: 'bot',
-            text: "Hey there! I'm Trekka, your personal trip planning assistant 🧳✨. Ask me where to go, what to pack, or how to plan — I'm here to help!"
-          }
-        ])
-        setSuggestions(['Find me a cheap getaway', 'What are some underrated travel spots?', 'Surprise me with a destination idea'])
-        setHasShownIntro(true)
-        // Show notification if chat is closed
-        if (!isOpen) {
-          setHasNotification(true)
-        }
-      }
+    if (location.pathname.includes('/trips') && !hasShownIntro && messages.length === 0) {
+      setMessages([{ sender: 'bot', text: INTRO_MESSAGE }])
+      setSuggestions(DEFAULT_SUGGESTIONS)
+      setHasShownIntro(true)
+      if (!isOpen) setHasNotification(true)
     }
+  }, [hasShownIntro, isOpen, location.pathname, messages.length])
 
-    // Check immediately
-    checkForTripsPage()
-    
-    // For React Router navigation detection
-    let lastPath = window.location.pathname
-    const detectRouteChange = () => {
-      if (lastPath !== window.location.pathname) {
-        lastPath = window.location.pathname
-        setTimeout(checkForTripsPage, 50) // Small delay for route to fully change
-      }
+  useEffect(() => {
+    if (!isOpen) return
+    setHasNotification(false)
+    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 180)
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsOpen(false)
     }
-    
-    // Create a MutationObserver to watch for DOM changes (React Router updates)
-    const observer = new MutationObserver(detectRouteChange)
-    observer.observe(document.body, { childList: true, subtree: true })
-    
-    // Also listen for browser navigation events
-    const handleRouteChange = () => {
-      setTimeout(checkForTripsPage, 100)
-    }
-    
-    window.addEventListener('popstate', handleRouteChange)
-    window.addEventListener('hashchange', handleRouteChange)
-    
-    // For manual navigation detection, check periodically
-    const intervalId = setInterval(() => {
-      detectRouteChange()
-    }, 500)
-    
+    document.addEventListener('keydown', handleKeyDown)
     return () => {
-      observer.disconnect()
-      window.removeEventListener('popstate', handleRouteChange)
-      window.removeEventListener('hashchange', handleRouteChange)
-      clearInterval(intervalId)
-    }
-  }, [hasShownIntro, messages.length, isOpen])
-
-
-  // Clear notification when chat is opened
-  useEffect(() => {
-    if (isOpen) {
-      setHasNotification(false)
+      window.clearTimeout(focusTimer)
+      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isOpen])
 
-
-  const toggleChat = () => {
-    setIsOpen(prev => {
-      const willOpen = !prev
-      // Show intro message when user manually opens chat for the first time
-      if (willOpen && !hasShownIntro && messages.length === 0) {
-        setMessages([
-          {
-            sender: 'bot',
-            text: "Hey there! I'm Trekka, your personal trip planning assistant 🧳✨. Ask me where to go, what to pack, or how to plan — I'm here to help!"
-          }
-        ])
-        setSuggestions(['Find me a cheap getaway', 'What are some underrated travel spots?', 'Surprise me with a destination idea'])
-        setHasShownIntro(true)
-      }
-      return willOpen
-    })
-  }
-
-  const generateFollowupMessage = async (tripData) => {
-    if (!tripData) return
-
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: FINETUNED_MODEL_ID,
-          messages: [
-            {
-              role: "system",
-              content:
-                `Give a short, helpful follow up message and 3 suggestion prompts` +
-                `Respond only in this format:\n{"followup": "text", "suggestions": ["suggestion1", "suggestion2", "suggestion3"]} in html format (not markdown)` +
-                `Today's date is ${new Date().toLocale}.`,
-            },
-            {
-              role: "user",
-              content: `I'm planning a trip to ${tripData.destination}. Here's my itinerary: ${JSON.stringify(tripData.itinerary,null, 2 )}`,
-            },
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      const data = await res.json()
-      const content = data.choices?.[0]?.message?.content || '{}'
-      const parsed = JSON.parse(content)
-
-      if (parsed.followup) {
-        setMessages(prev => [...prev, { sender: 'bot', text: parsed.followup }])
-      }
-      if (parsed.suggestions?.length) {
-        setSuggestions(parsed.suggestions)
-      }
-
-      if (!isOpen) setHasNotification(true)
-    } catch (err) {
-      console.error('Error generating AI follow-up:', err)
-    }
-  }
+  useEffect(() => () => window.clearInterval(streamTimerRef.current), [])
 
   useEffect(() => {
-    if (hasShownIntro && tripData) {
-      generateFollowupMessage(tripData)
+    const currentTripKey = tripData?.id || tripData?.sk
+    if (!hasShownIntro || !tripData || !currentTripKey || followupTripRef.current === currentTripKey) return
+    followupTripRef.current = currentTripKey
+
+    const generateFollowup = async () => {
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: FINETUNED_MODEL_ID,
+            messages: [
+              {
+                role: 'system',
+                content: `Give a short, helpful follow-up message and three suggestion prompts. Respond only as valid JSON in this format: {"followup":"text","suggestions":["one","two","three"]}. Today's date is ${new Date().toLocaleDateString()}.`,
+              },
+              {
+                role: 'user',
+                content: `I'm planning a trip to ${tripData.destination}. Here's my itinerary: ${JSON.stringify(tripData.itinerary, null, 2)}`,
+              },
+            ],
+            temperature: 0.7,
+          }),
+        })
+        if (!response.ok) throw new Error(`Follow-up request failed (${response.status})`)
+        const data = await response.json()
+        const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}')
+        if (parsed.followup) setMessages((previous) => [...previous, { sender: 'bot', text: parsed.followup }])
+        if (parsed.suggestions?.length) setSuggestions(parsed.suggestions)
+        if (!isOpen) setHasNotification(true)
+      } catch (error) {
+        console.error('Error generating AI follow-up:', error)
+      }
     }
-  }, [hasShownIntro, tripData])
+
+    generateFollowup()
+  }, [hasShownIntro, isOpen, tripData])
+
+  const toggleChat = () => {
+    if (!isOpen) showIntro()
+    setIsOpen((open) => !open)
+  }
 
   const sendMessage = async (text) => {
-    if (!text.trim()) return
+    const trimmedText = text.trim()
+    if (!trimmedText || isTyping) return
 
-    const newMessages = [...messages, { sender: 'user', text } ]
+    const newMessages = [...messages, { sender: 'user', text: trimmedText }]
     setMessages(newMessages)
     setSuggestions([])
     setInput('')
     setIsTyping(true)
 
     try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      if (!OPENAI_API_KEY) throw new Error('Trekka is not configured yet.')
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${OPENAI_API_KEY}`,
@@ -207,134 +156,202 @@ const Chatbot = () => {
         body: JSON.stringify({
           model: FINETUNED_MODEL_ID,
           messages: [
-            { role: 'system', 
-              content: `You are Trekka, Trip Trek's travel assistant helping users plan trips.` +
-                       (tripData ? ` The user is planning a trip to ${tripData.destination}. Here's their itinerary:\n` +
-                      JSON.stringify(tripData.itinerary, null, 2) : '')
-             },
-            ...newMessages.map(msg => ({
-              role: msg.sender === 'user' ? 'user' : 'assistant',
-              content: msg.text
-            }))
+            {
+              role: 'system',
+              content: `You are Trekka, Trek a Trip's friendly travel assistant. Give concise, practical planning help.${tripData ? ` The user is planning a trip to ${tripData.destination}. Their itinerary is: ${JSON.stringify(tripData.itinerary, null, 2)}` : ''}`,
+            },
+            ...newMessages.map((message) => ({
+              role: message.sender === 'user' ? 'user' : 'assistant',
+              content: message.text,
+            })),
           ],
-          temperature: 0.7
-        })
+          temperature: 0.7,
+        }),
       })
+      if (!response.ok) throw new Error(`Trekka request failed (${response.status})`)
 
-      const data = await res.json()
+      const data = await response.json()
       const botReply = data.choices?.[0]?.message?.content?.trim()
+      if (!botReply) throw new Error('Trekka returned an empty response.')
 
-
-      if (botReply) {
-        setStreamedMessage('')
-        let i = 0
-        const words = botReply.split(' ')
-
-        const typeNextWord = () => {
-          if (i < words.length) {
-            setStreamedMessage(prev => prev + (i === 0 ? '' : ' ') + words[i])
-            i++
-            setTimeout(typeNextWord, 100) // Adjust speed here (ms per word)
-          } else {
-            setMessages(prev => [...prev, { sender: 'bot', text: botReply }])
-            setStreamedMessage('')
-          }
-          // Show notification if chat is minimized
-          if (!isOpen) {
-            setHasNotification(true)
-          }
+      const words = botReply.split(/\s+/)
+      let wordIndex = 0
+      setStreamedMessage('')
+      window.clearInterval(streamTimerRef.current)
+      streamTimerRef.current = window.setInterval(() => {
+        wordIndex += 1
+        setStreamedMessage(words.slice(0, wordIndex).join(' '))
+        if (wordIndex >= words.length) {
+          window.clearInterval(streamTimerRef.current)
+          setMessages((previous) => [...previous, { sender: 'bot', text: botReply }])
+          setStreamedMessage('')
+          setIsTyping(false)
+          if (!isOpen) setHasNotification(true)
         }
-        typeNextWord()
-      } else {
-        setMessages(prev => [...prev, { sender: 'bot', text: 'Hmm, something went wrong.' }])
-      }
-      if (!isOpen) {
-        setHasNotification(true)
-      }
-    } catch (err) {
-      console.error(err)
-      setMessages(prev => [...prev, { sender: 'bot', text: 'Error contacting AI.' }])
+      }, 55)
+    } catch (error) {
+      console.error('Error contacting Trekka:', error)
+      setMessages((previous) => [...previous, {
+        sender: 'bot',
+        text: 'I hit a little turbulence. Please try again in a moment.',
+      }])
+      setIsTyping(false)
+      if (!isOpen) setHasNotification(true)
     }
-    if (!isOpen) {
-      setHasNotification(true)
-    }
-
-    setIsTyping(false)
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleSubmit = (event) => {
+    event.preventDefault()
     sendMessage(input)
   }
 
-  const handleSuggestionClick = (suggestion) => {
-    sendMessage(suggestion)     
+  const handleComposerKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      sendMessage(input)
+    }
   }
 
-
   return (
-    <div className="chatbot-wrapper">
-      <button 
-        className={`chat-toggle ${hasNotification ? 'has-notification' : ''}`}
-        onClick={toggleChat}
-      >
-        💬
-        {hasNotification && (
-          <>
-            <div className="notification-badge">!</div>
-            <div className="notification-popup">
-              New message from Trekka!
-              <div className="notification-arrow"></div>
-            </div>
-          </>
-        )}
-      </button>
+    <div className="trekka-chat">
+      {hasNotification && !isOpen && (
+        <div className="trekka-notification" role="status">
+          <strong>Trekka has an idea</strong>
+          <span>Open your travel assistant</span>
+          <span className="trekka-notification-arrow" aria-hidden="true" />
+        </div>
+      )}
 
-      <div className={`chatbox ${isOpen ? 'open' : ''}`}>
-       <div className="messages">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`message-row ${msg.sender === 'user' ? 'user' : 'bot'}`}>
-              <div className="avatar">{msg.sender === 'user' ? 'Y' : 'T'}</div>
-              <div>
-                <div className="label">{msg.sender === 'user' ? 'You' : 'Trekka'}</div>
-                <div className="message-content">{msg.text}</div>
+      <section
+        id="trekka-chat-panel"
+        className={`trekka-panel ${isOpen ? 'trekka-panel--open' : ''}`}
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="trekka-title"
+        aria-hidden={!isOpen}
+      >
+        <header className="trekka-header">
+          <span className="trekka-header-mark" aria-hidden="true">
+            <img src="/triptrek.svg" alt="" />
+          </span>
+          <div className="trekka-header-copy">
+            <div className="trekka-title-row">
+              <h2 id="trekka-title">trekka</h2>
+            </div>
+            <p>YOUR TRAVEL-PLANNING COMPANION</p>
+          </div>
+          <button type="button" className="trekka-close" onClick={() => setIsOpen(false)} aria-label="Close trekka">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          </button>
+        </header>
+
+        {tripData && (
+          <div className="trekka-trip-context">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21s6-5.6 6-11a6 6 0 1 0-12 0c0 5.4 6 11 6 11Z" />
+              <circle cx="12" cy="10" r="2" />
+            </svg>
+            <span>Helping with <strong>{tripData.destination}</strong></span>
+          </div>
+        )}
+
+        <div className="trekka-messages" role="log" aria-live="polite" aria-relevant="additions">
+          {messages.map((message, index) => (
+            <div key={`${message.sender}-${index}`} className={`trekka-message trekka-message--${message.sender}`}>
+              <span className="trekka-avatar" aria-hidden="true">
+                {message.sender === 'user' ? (
+                  profilePicture
+                    ? <img className="trekka-user-photo" src={profilePicture} alt="" referrerPolicy="no-referrer" />
+                    : profileInitial
+                ) : <img src="/triptrek.svg" alt="" />}
+              </span>
+              <div className="trekka-message-body">
+                <span className="trekka-message-name">{message.sender === 'user' ? profileName : 'trekka'}</span>
+                <p>{message.text}</p>
               </div>
             </div>
           ))}
 
-          {streamedMessage ? (
-            <div className="message-row bot">
-              <div className="avatar">T</div>
-              <div>
-                <div className="label">Trekka</div>
-                <div className="message-content">{streamedMessage}</div>
+          {streamedMessage && (
+            <div className="trekka-message trekka-message--bot">
+              <span className="trekka-avatar" aria-hidden="true"><img src="/triptrek.svg" alt="" /></span>
+              <div className="trekka-message-body">
+                <span className="trekka-message-name">trekka</span>
+                <p>{streamedMessage}</p>
               </div>
             </div>
-          ) : isTyping && (
-            <div className="typing">Trekka is typing...</div>
-          )}          
+          )}
 
-          {/* Invisible element to scroll to */}
-            <div ref={messagesEndRef} />
+          {isTyping && !streamedMessage && (
+            <div className="trekka-message trekka-message--bot" aria-label="trekka is thinking">
+              <span className="trekka-avatar" aria-hidden="true"><img src="/triptrek.svg" alt="" /></span>
+              <div className="trekka-typing" aria-hidden="true"><i /><i /><i /></div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
 
         {suggestions.length > 0 && (
-          <div className="suggestions">
-            {suggestions.map((s, i) => (
-              <button key={i} onClick={() => handleSuggestionClick(s)}>{s}</button>
-            ))}
+          <div className="trekka-suggestions" aria-label="Suggested questions">
+            <span>Try asking</span>
+            <div>
+              {suggestions.map((suggestion) => (
+                <button
+                  type="button"
+                  key={suggestion}
+                  onClick={() => sendMessage(suggestion)}
+                  disabled={isTyping}
+                >
+                  {suggestion}
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Trekka something..."
-          />
-          <button type="submit">Send</button>
-        </form>
-      </div>
+        <footer className="trekka-composer-wrap">
+          <form className="trekka-composer" onSubmit={handleSubmit}>
+            <label htmlFor="trekka-input" className="trekka-visually-hidden">Ask Trekka a travel question</label>
+            <textarea
+              ref={inputRef}
+              id="trekka-input"
+              rows="1"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={handleComposerKeyDown}
+              placeholder="Ask Trekka anything…"
+              disabled={isTyping}
+            />
+            <button type="submit" disabled={!input.trim() || isTyping} aria-label="Send message">
+              <SendIcon />
+            </button>
+          </form>
+          <p>Trekka can make mistakes. Double-check important travel details.</p>
+        </footer>
+      </section>
+
+      <button
+        type="button"
+        className={`trekka-toggle ${hasNotification ? 'trekka-toggle--notification' : ''}`}
+        onClick={toggleChat}
+        aria-label={isOpen ? 'Close Trekka travel assistant' : 'Open Trekka travel assistant'}
+        aria-expanded={isOpen}
+        aria-controls="trekka-chat-panel"
+      >
+        {isOpen ? (
+          <svg className="trekka-toggle-close" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        ) : (
+          <>
+            <svg className="trekka-toggle-chat" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M6 7.5h20v15H14l-6 4v-4H6v-15Z" />
+              <path d="M11 13h10M11 17h7" />
+            </svg>
+            <span className="trekka-toggle-spark" aria-hidden="true">✦</span>
+          </>
+        )}
+        {hasNotification && !isOpen && <span className="trekka-badge"><span className="trekka-visually-hidden">New message</span></span>}
+      </button>
     </div>
   )
 }
