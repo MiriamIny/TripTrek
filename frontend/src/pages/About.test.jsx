@@ -1,45 +1,52 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import About from './About'; // Adjust the path if needed
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
+import About from './About';
 
 describe('About component', () => {
-  it('renders the main heading', () => {
-    render(<About />);
-    expect(screen.getByRole('heading', { name: /about triptrek/i })).toBeInTheDocument();
-  });
+  const renderAbout = () => render(<About />, { wrapper: MemoryRouter });
 
-  it('renders the welcome message', () => {
-    render(<About />);
+  it('introduces the purpose of TripTrek', () => {
+    renderAbout();
+
+    expect(screen.getByText(/about triptrek/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/welcome to triptrek! we want you to be able to plan your trip/i)
+      screen.getByRole('heading', {
+        name: /planning should feel like the beginning of the adventure/i,
+      }),
     ).toBeInTheDocument();
   });
 
-  it('renders the question about planning', () => {
-    render(<About />);
+  it('explains why TripTrek exists', () => {
+    renderAbout();
+
+    expect(screen.getByText(/ever wish your trip was thoughtfully planned/i)).toBeInTheDocument();
+    expect(screen.getByText(/triptrek brings the shape of a journey/i)).toBeInTheDocument();
+  });
+
+  it('presents the three product principles', () => {
+    renderAbout();
+
+    expect(screen.getByRole('heading', { name: /clarity without rigidity/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /everything in one place/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/ever wish your trip was perfectly planned/i)
+      screen.getByRole('heading', { name: /planning can be part of the fun/i }),
     ).toBeInTheDocument();
   });
 
-  it('renders the question about debates', () => {
-    render(<About />);
-    expect(
-      screen.getByText(/want to skip the endless debates/i)
-    ).toBeInTheDocument();
+  it('links both calls to action to the Trips page', () => {
+    renderAbout();
+
+    expect(screen.getByRole('link', { name: /start planning/i })).toHaveAttribute('href', '/trips');
+    expect(screen.getByRole('link', { name: /plan your next trip/i })).toHaveAttribute(
+      'href',
+      '/trips',
+    );
   });
 
-  it('renders the paragraph about TripTrek features', () => {
-    render(<About />);
-    expect(
-      screen.getByText(/with triptrek, you can build your itinerary/i)
-    ).toBeInTheDocument();
-  });
+  it('keeps the closing TripTrek message', () => {
+    renderAbout();
 
-  it('renders the closing motivational message', () => {
-    render(<About />);
-    expect(
-      screen.getByText(/let’s make trip planning part of the fun/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/let’s make trip planning part of the fun/i)).toBeInTheDocument();
   });
 });

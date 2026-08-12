@@ -1,4 +1,3 @@
-// ✅ MOCK REACT ROUTER BEFORE ANYTHING ELSE
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
@@ -7,56 +6,67 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// ✅ IMPORTS AFTER MOCK
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Home from './Home';
 
 describe('Home component', () => {
   const mockNavigate = vi.fn();
 
   beforeEach(() => {
-    mockNavigate.mockClear(); // reset between tests
+    mockNavigate.mockClear();
     useNavigate.mockReturnValue(mockNavigate);
   });
 
-  it('renders the main heading', () => {
-    render(<Home />, { wrapper: MemoryRouter });
+  const renderHome = () => render(<Home />, { wrapper: MemoryRouter });
+
+  it('introduces TripTrek with a clear landing-page heading', () => {
+    renderHome();
 
     expect(
-      screen.getByRole('heading', {
-        name: /TripTrek: Where Adventures Begin with a Plan/i,
-      })
+      screen.getByRole('heading', { name: /your next adventure deserves a beautiful plan/i }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/your itinerary, made simple/i)).toBeInTheDocument();
   });
 
-  it('renders the "Plan Your Next Trip" button', () => {
-    render(<Home />, { wrapper: MemoryRouter });
-
-    expect(
-      screen.getByRole('button', { name: /Plan Your Next Trip/i })
-    ).toBeInTheDocument();
-  });
-
-  it('calls navigate when the button is clicked', async () => {
-    render(<Home />, { wrapper: MemoryRouter });
-
+  it('routes primary and final calls to action to trips', async () => {
+    renderHome();
     const user = userEvent.setup();
-    const button = screen.getByRole('button', { name: /Plan Your Next Trip/i });
 
-    await user.click(button);
+    await user.click(screen.getByRole('button', { name: /plan your next trip/i }));
+    await user.click(screen.getByRole('button', { name: /create your itinerary/i }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/trips');
+    expect(mockNavigate).toHaveBeenNthCalledWith(1, '/trips');
+    expect(mockNavigate).toHaveBeenNthCalledWith(2, '/trips');
   });
 
-  it('renders all expected carousel captions', () => {
-    render(<Home />, { wrapper: MemoryRouter });
+  it('explains the core planning benefits and steps', () => {
+    renderHome();
 
-    expect(screen.getAllByText(/Turn Dreams Into Destinations/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Every Stop, Right Where It Belongs/i)).toBeInTheDocument();
-    expect(screen.getByText(/Don’t Just Travel. Trek with a Plan/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Because the Best Trips Start with a Plan/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/No More Guesswork – Just Great Adventures/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /build it day by day/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /see the journey/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /keep plans together/i })).toBeInTheDocument();
+    expect(screen.getByText(/choose the adventure/i)).toBeInTheDocument();
+    expect(screen.getByText(/shape each day/i)).toBeInTheDocument();
+    expect(screen.getByText(/go with a plan/i)).toBeInTheDocument();
+  });
+
+  it('provides a working in-page link to the how-it-works section', () => {
+    renderHome();
+
+    expect(screen.getByRole('link', { name: /see how it works/i })).toHaveAttribute(
+      'href',
+      '#how-it-works',
+    );
+  });
+
+  it('features three distinct destinations in the inspiration gallery', () => {
+    renderHome();
+
+    expect(screen.getByRole('heading', { name: /escape to the coast/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /take the forest trail/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /reach new heights/i })).toBeInTheDocument();
   });
 });

@@ -75,8 +75,7 @@ describe('TripList', () => {
 
     render(<TripList />)
 
-    // The loading spinner has visually-hidden text "Loading..."
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByText('Loading your trips…')).toBeInTheDocument()
   })
 
   it('should render error state correctly', () => {
@@ -87,15 +86,15 @@ describe('TripList', () => {
 
     render(<TripList />)
 
-    expect(screen.getByText('Error Loading Trips')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /we couldn’t load your trips/i })).toBeInTheDocument()
     expect(screen.getByText('Error message')).toBeInTheDocument()
   })
 
   it('should render empty list state correctly', () => {
     render(<TripList />)
 
-    expect(screen.getByText(/No trips planned yet/)).toBeInTheDocument()
-    expect(screen.getByText('+ New Trip')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /your next adventure starts here/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /plan your first trip/i })).toBeInTheDocument()
   })
 
   it('should fetch trips on mount', () => {
@@ -104,18 +103,19 @@ describe('TripList', () => {
     expect(mockFetchTrips).toHaveBeenCalled()
   })
 
-  it('should show TripForm when + New Trip is clicked', () => {
+  it('should show TripForm when the empty-state action is clicked', () => {
     render(<TripList />)
 
-    fireEvent.click(screen.getByText('+ New Trip'))
+    fireEvent.click(screen.getByRole('button', { name: /plan your first trip/i }))
 
     expect(screen.getByText('Save Trip')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /create a new trip/i })).toBeInTheDocument()
   })
 
   it('should handle saving a trip', async () => {
     render(<TripList />)
 
-    fireEvent.click(screen.getByText('+ New Trip'))
+    fireEvent.click(screen.getByRole('button', { name: /plan your first trip/i }))
     fireEvent.click(screen.getByText('Save Trip'))
 
     await waitFor(() => expect(mockSaveTrip).toHaveBeenCalledWith({
@@ -129,7 +129,7 @@ describe('TripList', () => {
   it('should handle canceling trip creation', () => {
     render(<TripList />)
 
-    fireEvent.click(screen.getByText('+ New Trip'))
+    fireEvent.click(screen.getByRole('button', { name: /plan your first trip/i }))
     fireEvent.click(screen.getByText('Cancel'))
 
     expect(screen.queryByText('Save Trip')).not.toBeInTheDocument()
@@ -143,10 +143,59 @@ describe('TripList', () => {
 
     render(<TripList />)
 
-    // Click on the trip item (the destination text is within a strong tag)
-    fireEvent.click(screen.getByText('Test'))
+    fireEvent.click(screen.getByRole('button', { name: /view trip to test/i }))
 
     expect(mockNavigate).toHaveBeenCalledWith('/trips/1')
+  })
+
+  it('renders saved-trip details with readable dates and activity totals', () => {
+    useTripContext.mockReturnValue({
+      ...defaultContextValue,
+      trips: [
+        {
+          id: 1,
+          destination: 'Lisbon',
+          startDate: '05/10/2027',
+          endDate: '05/14/2027',
+          itinerary: [
+            { date: '05/10/2027', activities: [{ name: 'Tram ride' }, { name: 'Dinner' }] },
+            { date: '05/11/2027', activities: [{ name: 'Museum' }] },
+          ],
+        },
+      ],
+    })
+
+    render(<TripList />)
+
+    expect(screen.getByRole('heading', { name: /all trips/i })).toBeInTheDocument()
+    expect(screen.getByText('1 saved trip · 3 planned activities')).toBeInTheDocument()
+    expect(screen.getByText('May 10 – May 14, 2027')).toBeInTheDocument()
+    expect(screen.getByText('5 days')).toBeInTheDocument()
+    expect(screen.getByText('3 activities')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /new trip/i })).toBeInTheDocument()
+  })
+
+  it('renders a destination image when one is saved', () => {
+    useTripContext.mockReturnValue({
+      ...defaultContextValue,
+      trips: [
+        {
+          id: 1,
+          destination: 'Kyoto',
+          startDate: '10/01/2027',
+          endDate: '10/03/2027',
+          imageUrl: 'https://example.com/kyoto.jpg',
+          itinerary: [],
+        },
+      ],
+    })
+
+    const { container } = render(<TripList />)
+
+    expect(container.querySelector('.trip-card-media img')).toHaveAttribute(
+      'src',
+      'https://example.com/kyoto.jpg',
+    )
   })
 
   it('should delete a trip when delete button is confirmed', async () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, beforeEach, test, expect, vi } from 'vitest';
+import { describe, beforeAll, beforeEach, test, expect, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import NavigationBar from './NavigationBar';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,22 @@ vi.mock('../assets/TripTrekLogo.png', () => ({
 
 describe('NavigationBar', () => {
   const mockSignOut = vi.fn();
+
+  beforeAll(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -213,6 +229,7 @@ describe('NavigationBar', () => {
     expect(screen.getByRole('link', { name: /trips/i })).toHaveAttribute('href', '/trips');
     expect(screen.getByRole('link', { name: /about/i })).toHaveAttribute('href', '/about');
     expect(screen.getByRole('link', { name: /contact us/i })).toHaveAttribute('href', '/contact');
+    expect(screen.getByRole('link', { name: /home/i })).toHaveClass('main-nav-link--active');
   });
 
   test('navbar has correct accessibility attributes', () => {
