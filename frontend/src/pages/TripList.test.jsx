@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useNavigate } from 'react-router-dom'
 import TripList from './TripList'
 import { useTripContext } from '../context/TripContext'
+import { useAuth } from '../context/AuthContext'
 
 // Mocking dependencies
 vi.mock('react-router-dom', () => ({
@@ -11,6 +12,9 @@ vi.mock('react-router-dom', () => ({
 }))
 vi.mock('../context/TripContext', () => ({
   useTripContext: vi.fn(),
+}))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: vi.fn(),
 }))
 vi.mock('../components/TripForm', () => ({
   default: ({ onSave, onCancel }) => (
@@ -40,6 +44,27 @@ describe('TripList', () => {
     vi.clearAllMocks()
     useNavigate.mockReturnValue(mockNavigate)
     useTripContext.mockReturnValue(defaultContextValue)
+    useAuth.mockReturnValue({
+      isAuthenticated: true,
+      authStatus: 'authenticated',
+      openAuth: vi.fn(),
+    })
+  })
+
+  it('prompts guests to sign in without fetching trips', () => {
+    const openAuth = vi.fn()
+    useAuth.mockReturnValue({
+      isAuthenticated: false,
+      authStatus: 'unauthenticated',
+      openAuth,
+    })
+
+    render(<TripList />)
+
+    expect(screen.getByText(/Sign in to create new trips/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /sign in or create account/i }))
+    expect(openAuth).toHaveBeenCalledTimes(1)
+    expect(mockFetchTrips).not.toHaveBeenCalled()
   })
 
   it('should render loading state correctly', () => {

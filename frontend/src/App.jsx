@@ -9,6 +9,7 @@ import TripDetail from './pages/TripDetail';
 import NavigationBar from './components/NavigationBar';
 import { TripProvider } from './context/TripContext'; 
 import Chatbot from './components/chatbot/Chatbot';
+import AuthModal from './components/AuthModal';
 
 function App() {
   // No need to pass user props anymore
@@ -26,6 +27,7 @@ function App() {
           </Routes>
         </div>
         <Chatbot />
+        <AuthModal />
       </Router>
     </TripProvider>
   );

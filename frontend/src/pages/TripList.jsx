@@ -3,20 +3,22 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TripForm from '../components/TripForm'
 import { useTripContext } from '../context/TripContext'
+import { useAuth } from '../context/AuthContext'
 
 export default function TripList() {
   const navigate = useNavigate()
   const { trips, loading, error, deleteTrip, saveTrip, fetchTrips } = useTripContext()
+  const { isAuthenticated, authStatus, openAuth } = useAuth()
   const [showForm, setShowForm] = useState(false)
   const [operationLoading, setOperationLoading] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-    if (!initialized) {
+    if (isAuthenticated && !initialized) {
       fetchTrips()
       setInitialized(true)
     }
-  }, [fetchTrips, initialized])
+  }, [fetchTrips, initialized, isAuthenticated])
 
   const handleSave = useCallback(async (trip) => {
     setOperationLoading(true)
@@ -50,6 +52,35 @@ export default function TripList() {
   }, [navigate])
 
   const isLoading = loading || operationLoading
+
+  if (authStatus === 'configuring') {
+    return (
+      <div className="container py-5 text-center" aria-live="polite">
+        <div className="spinner-border text-forest-green" role="status">
+          <span className="visually-hidden">Checking sign-in status...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="trips-guest container">
+        <section className="trips-guest-card">
+          <div className="trips-guest-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M5 20V9l7-5 7 5v11M9 20v-6h6v6" />
+            </svg>
+          </div>
+          <h1>Plan your next adventure</h1>
+          <p>Sign in to create new trips, view your saved itineraries, and keep all your travel plans in one place.</p>
+          <button type="button" className="btn btn-terra trips-auth-button" onClick={openAuth}>
+            Sign In or Create Account
+          </button>
+        </section>
+      </main>
+    )
+  }
 
   if (error) {
     return (
