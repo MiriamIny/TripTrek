@@ -3,6 +3,7 @@ import { format, parse } from 'date-fns';
 import { useNavigate, useParams } from 'react-router-dom';
 import TripForm from '../components/TripForm';
 import TripMap from '../components/TripMap';
+import TripShareDialog from '../components/TripShareDialog';
 import { useTripContext } from '../context/TripContext';
 import './TripDetail.css';
 
@@ -66,6 +67,7 @@ export default function TripDetail() {
   const [trip, setTrip] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
   const [showMap, setShowMap] = useState(false);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     if (trips.length > 0) setTrip(getTripById(tripId));
@@ -75,6 +77,7 @@ export default function TripDetail() {
     trip?.itinerary?.reduce((total, day) => total + (day.activities?.length || 0), 0) || 0
   ), [trip]);
   const tripLength = getTripLength(trip?.startDate, trip?.endDate);
+  const isOwner = trip?.access !== 'editor';
 
   const handleSave = async (updatedTrip) => {
     await saveTrip(updatedTrip);
@@ -125,11 +128,17 @@ export default function TripDetail() {
             ) : (
               <HeroFallback />
             )}
-            <span className="trip-detail-saved-badge">Saved trip</span>
+            <span className="trip-detail-saved-badge">
+              {isOwner ? 'Your trip' : 'Shared trip'}
+            </span>
           </div>
 
           <div className="trip-detail-hero-content">
-            <p className="trip-detail-eyebrow">Your next chapter</p>
+            <p className="trip-detail-eyebrow">
+              {isOwner
+                ? 'Your next chapter'
+                : `Shared by ${trip.sharedByName || trip.sharedByEmail || 'a travel companion'}`}
+            </p>
             <h1>{trip.destination}</h1>
             <p className="trip-detail-date-range">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -168,6 +177,19 @@ export default function TripDetail() {
                   </svg>
                   Edit Trip
                 </button>
+                {isOwner && (
+                  <button
+                    type="button"
+                    className="trip-detail-secondary-action"
+                    onClick={() => setShowShare(true)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="9" cy="8" r="3" />
+                      <path d="M3.5 18c.5-3.2 2.4-5 5.5-5s5 1.8 5.5 5M16 8h5M18.5 5.5v5" />
+                    </svg>
+                    Share Trip
+                  </button>
+                )}
                 {apiKey && (
                   <button type="button" className="trip-detail-secondary-action" onClick={() => setShowMap((visible) => !visible)}>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -262,6 +284,9 @@ export default function TripDetail() {
           </>
         )}
       </div>
+      {showShare && (
+        <TripShareDialog trip={trip} onClose={() => setShowShare(false)} />
+      )}
     </main>
   );
 }
