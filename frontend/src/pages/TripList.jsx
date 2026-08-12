@@ -65,16 +65,20 @@ export default function TripList() {
 
   if (!isAuthenticated) {
     return (
-      <main className="trips-guest container">
+      <main className="trips-guest">
         <section className="trips-guest-card">
           <div className="trips-guest-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
-              <path d="M5 20V9l7-5 7 5v11M9 20v-6h6v6" />
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="m15.2 8.8-1.7 4.7-4.7 1.7 1.7-4.7 4.7-1.7Z" />
             </svg>
           </div>
+          <p className="trips-guest-eyebrow">Your trips</p>
           <h1>Plan your next adventure</h1>
-          <p>Sign in to create new trips, view your saved itineraries, and keep all your travel plans in one place.</p>
-          <button type="button" className="btn btn-terra trips-auth-button" onClick={openAuth}>
+          <p className="trips-guest-intro">
+            Sign in to create new trips, view saved itineraries, and keep every plan in one place.
+          </p>
+          <button type="button" className="trips-auth-button" onClick={openAuth}>
             Sign In or Create Account
           </button>
         </section>
