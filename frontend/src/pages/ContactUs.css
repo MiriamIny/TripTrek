@@ -1,0 +1,127 @@
+.contact-page {
+  min-height: calc(100vh - 105px);
+  padding: clamp(3rem, 7vw, 6rem) 1rem;
+}
+
+.contact-content {
+  max-width: 760px;
+}
+
+.contact-header {
+  margin: 0 auto clamp(2rem, 5vw, 3rem);
+  text-align: center;
+}
+
+.contact-header h1 {
+  margin: 0 0 1rem;
+  color: #2e7d32;
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.contact-header p {
+  max-width: 650px;
+  margin: 0 auto;
+  color: #526169;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  background: #fff;
+  border: 1px solid rgba(46, 125, 50, 0.09);
+  border-radius: 14px;
+  box-shadow: 0 14px 35px rgba(55, 71, 79, 0.12);
+}
+
+.contact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contact-field label {
+  color: #37474f;
+  font-weight: 600;
+}
+
+.contact-field input,
+.contact-field textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  color: #263238;
+  background: #fff;
+  border: 1px solid #cdd5d9;
+  border-radius: 8px;
+  font: inherit;
+  line-height: 1.5;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.contact-field textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.contact-field input::placeholder,
+.contact-field textarea::placeholder {
+  color: #87949a;
+}
+
+.contact-field input:focus,
+.contact-field textarea:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.14);
+  outline: none;
+}
+
+.contact-submit {
+  align-self: flex-start;
+  min-width: 170px;
+  margin-top: 0.25rem;
+  padding: 0.85rem 1.5rem;
+  color: #fff;
+  background: #e07a5f;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.contact-submit:hover {
+  background: #cf684e;
+  box-shadow: 0 6px 16px rgba(207, 104, 78, 0.25);
+  transform: translateY(-1px);
+}
+
+.contact-submit:focus-visible {
+  outline: 3px solid rgba(46, 125, 50, 0.3);
+  outline-offset: 3px;
+}
+
+.contact-submit:active {
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+@media (max-width: 575.98px) {
+  .contact-page {
+    padding-top: 2.5rem;
+  }
+
+  .contact-form {
+    border-radius: 12px;
+  }
+
+  .contact-submit {
+    align-self: stretch;
+    width: 100%;
+  }
+}

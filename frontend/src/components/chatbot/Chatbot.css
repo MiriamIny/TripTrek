@@ -169,7 +169,7 @@
 }
 
 /* Input Form */
-form {
+.chatbox form {
   display: flex;
   border-top: 1px solid #e9ecef;
   padding: 12px;
@@ -178,7 +178,7 @@ form {
   gap: 8px;
 }
 
-form input {
+.chatbox form input {
   flex: 1;
   border: 1px solid #dee2e6;
   padding: 12px 16px;
@@ -189,12 +189,12 @@ form input {
   transition: border-color 0.2s, background-color 0.2s;
 }
 
-form input:focus {
+.chatbox form input:focus {
   border-color: #0077b6;
   background: white;
 }
 
-form button {
+.chatbox form button {
   background-color: #0077b6;
   color: white;
   border: none;
@@ -207,11 +207,11 @@ form button {
   min-width: fit-content;
 }
 
-form button:hover {
+.chatbox form button:hover {
   background-color: #023e8a;
 }
 
-form button:active {
+.chatbox form button:active {
   transform: scale(0.98);
 }
 
