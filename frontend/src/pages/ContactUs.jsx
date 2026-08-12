@@ -1,34 +1,54 @@
 
+import './ContactUs.css';
+
 function ContactUs() {
   return (
-    <div className="contact-container py-5">
-      <div className="container">
-        <h2 className="text-center mb-4 text-forest-green">Contact Us</h2>
-        <p className="text-center mb-5 text-slate-gray">
+    <main className="contact-page">
+      <div className="contact-content container">
+        <header className="contact-header">
+          <h1>Contact Us</h1>
+          <p>
           Have questions about your itinerary or need help planning your next trip? Reach out to us!
-        </p>
+          </p>
+        </header>
 
-        <div className="row justify-content-center">
-          <div className="col-md-8">
-            <form className="p-4 shadow rounded bg-white-custom">
-              <div className="mb-3">
-                <label htmlFor="name" className="form-label text-slate-gray">Name</label>
-                <input type="text" className="form-control" id="name" placeholder="Your name" />
-              </div>
-              <div className="mb-3">
-                <label htmlFor="email" className="form-label text-slate-gray">Email</label>
-                <input type="email" className="form-control" id="email" placeholder="your@email.com" />
-              </div>
-              <div className="mb-3">
-                <label htmlFor="message" className="form-label text-slate-gray">Message</label>
-                <textarea className="form-control" id="message" rows="5" placeholder="How can we help?"></textarea>
-              </div>
-              <button type="submit" className="btn btn-terra w-100">Send Message</button>
-            </form>
+        <form className="contact-form" onSubmit={(event) => event.preventDefault()}>
+          <div className="contact-field">
+            <label htmlFor="name">Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              autoComplete="name"
+              placeholder="Your name"
+              required
+            />
           </div>
-        </div>
+          <div className="contact-field">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+              required
+            />
+          </div>
+          <div className="contact-field">
+            <label htmlFor="message">Message</label>
+            <textarea
+              id="message"
+              name="message"
+              rows="6"
+              placeholder="How can we help?"
+              required
+            />
+          </div>
+          <button type="submit" className="contact-submit">Send Message</button>
+        </form>
       </div>
-    </div>
+    </main>
   );
 }
 
