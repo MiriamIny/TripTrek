@@ -17,6 +17,7 @@ const response = (statusCode, body) => ({ statusCode, headers, body: JSON.string
 const normalizeEmail = (value) => typeof value === 'string' ? value.trim().toLowerCase() : ''
 const validEmail = (email) => email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 const tripKey = (ownerId, tripId) => `TRIP#${ownerId}#${tripId}`
+const PERMISSIONS = new Set(['editor', 'viewer'])
 
 const getOwnedTrip = (ownerId, tripId) => db.send(new GetCommand({
   TableName: TABLE_NAME,
@@ -39,8 +40,12 @@ export const handler = async (event) => {
     }
     const tripId = body?.tripId
     const email = normalizeEmail(body?.email)
+    const permission = body?.permission || 'editor'
     if (!tripId || !validEmail(email)) {
       return response(400, { message: 'Enter a valid email address.' })
+    }
+    if (!PERMISSIONS.has(permission)) {
+      return response(400, { message: 'Choose either Editor or Viewer access.' })
     }
     if (email === callerEmail) {
       return response(400, { message: 'This trip already belongs to you.' })
@@ -56,7 +61,7 @@ export const handler = async (event) => {
         ownerId: userId,
         tripId,
         email,
-        permission: 'editor',
+        permission,
         createdAt,
       }
       if (claims.name || trip.Item.ownerName) invite.invitedByName = claims.name || trip.Item.ownerName

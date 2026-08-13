@@ -63,11 +63,12 @@ function HeroFallback() {
 export default function TripDetail() {
   const { tripId } = useParams();
   const navigate = useNavigate();
-  const { trips, loading, saveTrip, getTripById } = useTripContext();
+  const { trips, loading, saveTrip, getTripById, fetchTrips } = useTripContext();
   const [trip, setTrip] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
   const [showMap, setShowMap] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     if (trips.length > 0) setTrip(getTripById(tripId));
@@ -77,12 +78,23 @@ export default function TripDetail() {
     trip?.itinerary?.reduce((total, day) => total + (day.activities?.length || 0), 0) || 0
   ), [trip]);
   const tripLength = getTripLength(trip?.startDate, trip?.endDate);
-  const isOwner = trip?.access !== 'editor';
+  const isOwner = !trip?.access || trip.access === 'owner';
+  const canEdit = isOwner || trip?.access === 'editor';
 
   const handleSave = async (updatedTrip) => {
-    await saveTrip(updatedTrip);
+    try {
+      setSaveError('');
+      await saveTrip(updatedTrip);
+      setEditingTrip(null);
+    } catch (error) {
+      setSaveError(error.message || 'Unable to save this trip.');
+    }
+  };
+
+  const handleLoadLatest = async () => {
     setEditingTrip(null);
-    setTrip(getTripById(tripId));
+    setSaveError('');
+    await fetchTrips();
   };
 
   if (loading) {
@@ -129,7 +141,7 @@ export default function TripDetail() {
               <HeroFallback />
             )}
             <span className="trip-detail-saved-badge">
-              {isOwner ? 'Your trip' : 'Shared trip'}
+              {isOwner ? 'Owner' : canEdit ? 'Editor' : 'Viewer'}
             </span>
           </div>
 
@@ -164,19 +176,22 @@ export default function TripDetail() {
 
             {!editingTrip && (
               <div className="trip-detail-actions">
-                <button
-                  type="button"
-                  className="trip-detail-primary-action"
-                  onClick={() => {
-                    setEditingTrip(trip);
-                    setShowMap(false);
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m5 16-.8 3.8L8 19l10-10-3-3L5 16ZM13.8 7.2l3 3" />
-                  </svg>
-                  Edit Trip
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="trip-detail-primary-action"
+                    onClick={() => {
+                      setSaveError('');
+                      setEditingTrip(trip);
+                      setShowMap(false);
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m5 16-.8 3.8L8 19l10-10-3-3L5 16ZM13.8 7.2l3 3" />
+                    </svg>
+                    Edit Trip
+                  </button>
+                )}
                 {isOwner && (
                   <button
                     type="button"
@@ -203,9 +218,23 @@ export default function TripDetail() {
           </div>
         </section>
 
+        {saveError && (
+          <div className="trip-detail-save-error" role="alert">
+            <span>{saveError}</span>
+            <button type="button" onClick={handleLoadLatest}>Load latest changes</button>
+          </div>
+        )}
+
         {editingTrip ? (
           <section className="trip-detail-edit-section" aria-label="Edit trip">
-            <TripForm trip={editingTrip} onSave={handleSave} onCancel={() => setEditingTrip(null)} />
+            <TripForm
+              trip={editingTrip}
+              onSave={handleSave}
+              onCancel={() => {
+                setEditingTrip(null);
+                setSaveError('');
+              }}
+            />
           </section>
         ) : (
           <>
@@ -260,7 +289,17 @@ export default function TripDetail() {
                   <HeroFallback />
                   <h3>No itinerary available for this trip.</h3>
                   <p>Add a few ideas—or keep the whole adventure spontaneous.</p>
-                  <button type="button" onClick={() => setEditingTrip(trip)}>Start planning</button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSaveError('');
+                        setEditingTrip(trip);
+                      }}
+                    >
+                      Start planning
+                    </button>
+                  )}
                 </div>
               )}
             </section>
@@ -276,7 +315,9 @@ export default function TripDetail() {
                 <div className="trip-detail-map-frame">
                   <TripMap
                     trip={trip}
-                    onMapDataReady={(mapData) => handleSave({ ...trip, mapData })}
+                    onMapDataReady={canEdit
+                      ? (mapData) => handleSave({ ...trip, mapData })
+                      : undefined}
                   />
                 </div>
               </section>

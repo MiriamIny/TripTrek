@@ -65,7 +65,7 @@ export const TripProvider = ({ children }) => {
 
   const deleteTrip = useCallback(async (tripId) => {
     const trip = trips.find((candidate) => candidate.id === tripId)
-    const isShared = trip?.access === 'editor'
+    const isShared = trip?.access && trip.access !== 'owner'
     const path = isShared
       ? `tripShares?tripId=${encodeURIComponent(tripId)}&ownerId=${encodeURIComponent(trip.ownerId)}`
       : `deleteTrip?tripId=${encodeURIComponent(tripId)}`
@@ -74,14 +74,14 @@ export const TripProvider = ({ children }) => {
     await fetchTrips()
   }, [fetchTrips, trips])
 
-  const updateTripAPI = useCallback(async (tripId, attributeName, newValue, ownerId) => {
+  const updateTripAPI = useCallback(async (tripId, updates, ownerId, expectedVersion) => {
     const query = new URLSearchParams({ tripId })
     if (ownerId && ownerId !== user?.userId) query.set('ownerId', ownerId)
 
     const response = await tripApiFetch(`updateTrip?${query}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ attributeName, newValue }),
+      body: JSON.stringify({ updates, expectedVersion }),
     })
     return response.json()
   }, [user?.userId])
@@ -92,23 +92,31 @@ export const TripProvider = ({ children }) => {
     if (trip.id) {
       const existingTrip = trips.find((candidate) => candidate.id === trip.id)
       if (!existingTrip) throw new Error('This trip is no longer available.')
+      if (existingTrip.access === 'viewer') {
+        throw new Error('You have view-only access to this trip.')
+      }
 
       const ownerId = existingTrip.ownerId
+      const updates = {}
       if (existingTrip.destination !== trip.destination) {
-        await updateTripAPI(trip.id, 'destination', finalTrip.destination, ownerId)
-        await updateTripAPI(trip.id, 'mapData', null, ownerId)
+        updates.destination = finalTrip.destination
+        updates.mapData = null
       }
       if (existingTrip.startDate !== trip.startDate) {
-        await updateTripAPI(trip.id, 'startDate', trip.startDate, ownerId)
+        updates.startDate = trip.startDate
       }
       if (existingTrip.endDate !== trip.endDate) {
-        await updateTripAPI(trip.id, 'endDate', trip.endDate, ownerId)
+        updates.endDate = trip.endDate
       }
-      if (JSON.stringify(existingTrip.mapData) !== JSON.stringify(trip.mapData)) {
-        await updateTripAPI(trip.id, 'mapData', trip.mapData ?? null, ownerId)
+      if (!('mapData' in updates)
+        && JSON.stringify(existingTrip.mapData) !== JSON.stringify(trip.mapData)) {
+        updates.mapData = trip.mapData ?? null
       }
       if (JSON.stringify(existingTrip.itinerary) !== JSON.stringify(finalTrip.itinerary)) {
-        await updateTripAPI(trip.id, 'itinerary', finalTrip.itinerary, ownerId)
+        updates.itinerary = finalTrip.itinerary
+      }
+      if (Object.keys(updates).length) {
+        await updateTripAPI(trip.id, updates, ownerId, existingTrip.version ?? 0)
       }
     } else {
       finalTrip.id = uuidv4()
@@ -124,6 +132,9 @@ export const TripProvider = ({ children }) => {
   }, [fetchTrips, trips, updateTripAPI])
 
   const uploadTripImage = useCallback(async (file, locationName, tripId) => {
+    const trip = tripId ? trips.find((candidate) => candidate.id === tripId) : null
+    if (trip?.access === 'viewer') throw new Error('You have view-only access to this trip.')
+
     const extension = file.name.split('.').pop()
     const safeBase = (locationName || 'trip')
       .toString()
@@ -149,8 +160,12 @@ export const TripProvider = ({ children }) => {
     if (!uploadResponse.ok) throw new Error('Unable to upload that image.')
 
     if (tripId) {
-      const trip = trips.find((candidate) => candidate.id === tripId)
-      await updateTripAPI(tripId, 'imageUrl', imageUrl, trip?.ownerId)
+      await updateTripAPI(
+        tripId,
+        { imageUrl },
+        trip?.ownerId,
+        trip?.version ?? 0,
+      )
       await fetchTrips()
     }
     return imageUrl
@@ -161,11 +176,11 @@ export const TripProvider = ({ children }) => {
     return response.json()
   }, [])
 
-  const shareTrip = useCallback(async (tripId, email) => {
+  const shareTrip = useCallback(async (tripId, email, permission = 'editor') => {
     const response = await tripApiFetch('tripShares', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tripId, email }),
+      body: JSON.stringify({ tripId, email, permission }),
     })
     return response.json()
   }, [])

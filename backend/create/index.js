@@ -66,6 +66,7 @@ export const handler = async (event) => {
       startDate,
       endDate,
       itinerary,
+      version: 0,
       createdAt: now,
       updatedAt: now,
     }

@@ -129,7 +129,7 @@ export default function TripList() {
 
   const handleDelete = useCallback(async (tripId) => {
     const trip = trips.find((candidate) => candidate.id === tripId)
-    const prompt = trip?.access === 'editor'
+    const prompt = trip?.access && trip.access !== 'owner'
       ? 'Leave this shared trip? It will be removed from your trips, but the owner will keep it.'
       : 'Delete this trip for everyone? This cannot be undone.'
     if (window.confirm(prompt)) {
@@ -199,7 +199,7 @@ export default function TripList() {
   const isLoading = loading || operationLoading
   const hasTrips = trips.length > 0
   const totalActivities = trips.reduce((total, trip) => total + getActivityCount(trip), 0)
-  const sharedTripCount = trips.filter((trip) => trip.access === 'editor').length
+  const sharedTripCount = trips.filter((trip) => trip.access && trip.access !== 'owner').length
 
   if (showForm) {
     return (
@@ -305,7 +305,9 @@ export default function TripList() {
                           </span>
                         )}
                         <span className="trip-card-saved-label">
-                          {trip.access === 'editor' ? 'Shared with you' : 'Your trip'}
+                          {!trip.access || trip.access === 'owner'
+                            ? 'Owner'
+                            : trip.access === 'viewer' ? 'Viewer' : 'Editor'}
                         </span>
                       </span>
 
@@ -326,7 +328,7 @@ export default function TripList() {
                           {formatTripDates(trip.startDate, trip.endDate)}
                         </span>
 
-                        {trip.access === 'editor' && (
+                        {trip.access && trip.access !== 'owner' && (
                           <span className="trip-card-shared-by">
                             Shared by {trip.sharedByName || trip.sharedByEmail || 'a travel companion'}
                           </span>
@@ -345,11 +347,11 @@ export default function TripList() {
                       className="trip-card-delete"
                       onClick={() => handleDelete(trip.id)}
                       disabled={isLoading}
-                      aria-label={trip.access === 'editor'
+                      aria-label={trip.access && trip.access !== 'owner'
                         ? `Leave shared trip to ${trip.destination}`
                         : `Delete trip to ${trip.destination}`}
                     >
-                      {trip.access === 'editor' ? (
+                      {trip.access && trip.access !== 'owner' ? (
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" />
                         </svg>

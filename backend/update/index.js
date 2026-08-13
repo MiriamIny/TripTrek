@@ -27,8 +27,16 @@ export const handler = async (event) => {
   } catch {
     return response(400, { message: 'Invalid JSON body.' })
   }
-  const { attributeName, newValue } = body || {}
-  if (!EDITABLE_ATTRIBUTES.has(attributeName) || typeof newValue === 'undefined') {
+  const legacyUpdate = body?.attributeName
+    ? { [body.attributeName]: body.newValue }
+    : null
+  const updates = body?.updates || legacyUpdate
+  const entries = updates && typeof updates === 'object' && !Array.isArray(updates)
+    ? Object.entries(updates)
+    : []
+  if (!entries.length || entries.some(([name, value]) => (
+    !EDITABLE_ATTRIBUTES.has(name) || typeof value === 'undefined'
+  ))) {
     return response(400, { message: 'That trip field cannot be updated.' })
   }
 
@@ -45,19 +53,41 @@ export const handler = async (event) => {
       }
     }
 
+    const names = { '#version': 'version' }
+    const values = {
+      ':updatedAt': new Date().toISOString(),
+      ':zero': 0,
+      ':one': 1,
+    }
+    const assignments = entries.map(([name, value], index) => {
+      names[`#field${index}`] = name
+      values[`:value${index}`] = value
+      return `#field${index} = :value${index}`
+    })
+    const expectedVersion = Number.isInteger(body?.expectedVersion) ? body.expectedVersion : null
+    if (expectedVersion !== null) values[':expectedVersion'] = expectedVersion
+
     const result = await db.send(new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { pk: ownerId, sk: tripId },
-      UpdateExpression: 'SET #attribute = :value, updatedAt = :updatedAt',
-      ExpressionAttributeNames: { '#attribute': attributeName },
-      ExpressionAttributeValues: { ':value': newValue, ':updatedAt': new Date().toISOString() },
-      ConditionExpression: 'attribute_exists(pk) AND attribute_exists(sk)',
+      UpdateExpression: `SET ${assignments.join(', ')}, updatedAt = :updatedAt, #version = if_not_exists(#version, :zero) + :one`,
+      ExpressionAttributeNames: names,
+      ExpressionAttributeValues: values,
+      ConditionExpression: expectedVersion === null
+        ? 'attribute_exists(pk) AND attribute_exists(sk)'
+        : 'attribute_exists(pk) AND attribute_exists(sk) AND (attribute_not_exists(#version) OR #version = :expectedVersion)',
       ReturnValues: 'UPDATED_NEW',
     }))
     return response(200, result.Attributes)
   } catch (error) {
     if (error.name === 'ConditionalCheckFailedException') {
-      return response(404, { message: 'Trip not found.' })
+      const current = await db.send(new GetCommand({
+        TableName: TABLE_NAME,
+        Key: { pk: ownerId, sk: tripId },
+      }))
+      return current.Item
+        ? response(409, { message: 'This trip changed since you opened it. Refresh the trip and review the latest changes before saving again.' })
+        : response(404, { message: 'Trip not found.' })
     }
     console.error('Error updating trip:', error)
     return response(500, { message: 'Unable to update the trip.' })

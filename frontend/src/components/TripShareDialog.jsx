@@ -2,10 +2,94 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTripContext } from '../context/TripContext'
 import './TripShareDialog.css'
 
+const PERMISSION_OPTIONS = [
+  { value: 'editor', label: 'Editor', description: 'Can view and edit the trip' },
+  { value: 'viewer', label: 'Viewer', description: 'Can view but not make changes' },
+]
+
+function PermissionDropdown({ value, onChange, disabled, label }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+  const selected = PERMISSION_OPTIONS.find((option) => option.value === value)
+    || PERMISSION_OPTIONS[0]
+
+  useEffect(() => {
+    if (!open) return undefined
+    const handlePointerDown = (event) => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [open])
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      setOpen(false)
+      return
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const currentIndex = PERMISSION_OPTIONS.findIndex((option) => option.value === value)
+      const direction = event.key === 'ArrowDown' ? 1 : -1
+      const nextIndex = (currentIndex + direction + PERMISSION_OPTIONS.length)
+        % PERMISSION_OPTIONS.length
+      onChange(PERMISSION_OPTIONS[nextIndex].value)
+      setOpen(true)
+    }
+  }
+
+  return (
+    <div className="trip-share-permission-dropdown" ref={containerRef}>
+      <button
+        type="button"
+        className="trip-share-permission-trigger"
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={handleKeyDown}
+        disabled={disabled}
+        aria-label={`${label}: ${selected.label}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span>{selected.label}</span>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4" /></svg>
+      </button>
+
+      {open && (
+        <div className="trip-share-permission-menu" role="listbox" aria-label={label}>
+          {PERMISSION_OPTIONS.map((option) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              className="trip-share-permission-option"
+              key={option.value}
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+              }}
+            >
+              <span className="trip-share-permission-check" aria-hidden="true">
+                {option.value === value && (
+                  <svg viewBox="0 0 20 20"><path d="m5 10 3 3 7-7" /></svg>
+                )}
+              </span>
+              <span>
+                <strong>{option.label}</strong>
+                <small>{option.description}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TripShareDialog({ trip, onClose }) {
   const { getTripCollaborators, shareTrip, removeTripCollaborator } = useTripContext()
   const [collaborators, setCollaborators] = useState([])
   const [email, setEmail] = useState('')
+  const [permission, setPermission] = useState('editor')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -43,12 +127,27 @@ export default function TripShareDialog({ trip, onClose }) {
     setError('')
     setMessage('')
     try {
-      await shareTrip(trip.id, email)
+      await shareTrip(trip.id, email, permission)
       setEmail('')
-      setMessage('Access added. They will see this trip when they sign in with that email.')
+      setMessage(`${permission === 'editor' ? 'Editor' : 'Viewer'} access added. They will see this trip when they sign in with that email.`)
       await loadCollaborators()
     } catch (shareError) {
       setError(shareError.message || 'Unable to add that collaborator.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handlePermissionChange = async (collaboratorEmail, nextPermission) => {
+    setSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      await shareTrip(trip.id, collaboratorEmail, nextPermission)
+      setMessage(`Access updated to ${nextPermission === 'editor' ? 'Editor' : 'Viewer'}.`)
+      await loadCollaborators()
+    } catch (permissionError) {
+      setError(permissionError.message || 'Unable to update that permission.')
     } finally {
       setSaving(false)
     }
@@ -98,7 +197,7 @@ export default function TripShareDialog({ trip, onClose }) {
         </header>
 
         <p className="trip-share-intro">
-          Invite someone by email. They can view and edit the itinerary with you after signing in.
+          Invite someone by email and decide whether they can edit the itinerary or only view it.
         </p>
 
         <form className="trip-share-form" onSubmit={handleInvite}>
@@ -115,7 +214,13 @@ export default function TripShareDialog({ trip, onClose }) {
               required
               disabled={saving}
             />
-            <button type="submit" disabled={saving || !email.trim()}>
+            <PermissionDropdown
+              value={permission}
+              onChange={setPermission}
+              disabled={saving}
+              label="Invitation permission"
+            />
+            <button className="trip-share-submit" type="submit" disabled={saving || !email.trim()}>
               {saving ? 'Adding…' : 'Add access'}
             </button>
           </div>
@@ -129,13 +234,23 @@ export default function TripShareDialog({ trip, onClose }) {
         <div className="trip-share-people">
           <div className="trip-share-people-heading">
             <h3>People with access</h3>
-            {!loading && <span>{collaborators.length}</span>}
+            {!loading && <span>{collaborators.length + 1}</span>}
           </div>
 
           {loading ? (
             <p className="trip-share-loading">Loading access…</p>
           ) : collaborators.length ? (
             <ul>
+              <li className="trip-share-owner-row">
+                <span className="trip-share-avatar" aria-hidden="true">
+                  {(trip.ownerName || trip.ownerEmail || 'You').charAt(0).toUpperCase()}
+                </span>
+                <span className="trip-share-person-copy">
+                  <strong>{trip.ownerName || 'You'}</strong>
+                  {trip.ownerEmail && <small>{trip.ownerEmail}</small>}
+                </span>
+                <span className="trip-share-owner-label">Owner</span>
+              </li>
               {collaborators.map((collaborator) => (
                 <li key={collaborator.email}>
                   <span className="trip-share-avatar" aria-hidden="true">
@@ -143,10 +258,16 @@ export default function TripShareDialog({ trip, onClose }) {
                   </span>
                   <span className="trip-share-person-copy">
                     <strong>{collaborator.email}</strong>
-                    <small>Can edit</small>
                   </span>
+                  <PermissionDropdown
+                    value={collaborator.permission || 'editor'}
+                    onChange={(nextPermission) => handlePermissionChange(collaborator.email, nextPermission)}
+                    disabled={saving}
+                    label={`Permission for ${collaborator.email}`}
+                  />
                   <button
                     type="button"
+                    className="trip-share-remove"
                     onClick={() => handleRemove(collaborator.email)}
                     disabled={saving}
                     aria-label={`Remove ${collaborator.email}`}
@@ -157,7 +278,18 @@ export default function TripShareDialog({ trip, onClose }) {
               ))}
             </ul>
           ) : (
-            <p className="trip-share-empty">Only you have access right now.</p>
+            <ul>
+              <li className="trip-share-owner-row">
+                <span className="trip-share-avatar" aria-hidden="true">
+                  {(trip.ownerName || trip.ownerEmail || 'You').charAt(0).toUpperCase()}
+                </span>
+                <span className="trip-share-person-copy">
+                  <strong>{trip.ownerName || 'You'}</strong>
+                  {trip.ownerEmail && <small>{trip.ownerEmail}</small>}
+                </span>
+                <span className="trip-share-owner-label">Owner</span>
+              </li>
+            </ul>
           )}
         </div>
       </section>
