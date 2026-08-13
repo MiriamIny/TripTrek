@@ -155,9 +155,11 @@ export default function TripShareDialog({ trip, onClose }) {
     setError('')
     setMessage('')
     try {
-      await shareTrip(trip.id, email, permission)
+      const result = await shareTrip(trip.id, email, permission)
       setEmail('')
-      setMessage(`${permission === 'editor' ? 'Editor' : 'Viewer'} access added. They will see this trip when they sign in with that email.`)
+      setMessage(result.invitationEmailSent
+        ? `${permission === 'editor' ? 'Editor' : 'Viewer'} access added and invitation emailed.`
+        : `${permission === 'editor' ? 'Editor' : 'Viewer'} access added, but the invitation email could not be sent. They can still sign in with that email to view the trip.`)
       await loadCollaborators()
     } catch (shareError) {
       setError(shareError.message || 'Unable to add that collaborator.')
@@ -171,7 +173,7 @@ export default function TripShareDialog({ trip, onClose }) {
     setError('')
     setMessage('')
     try {
-      await shareTrip(trip.id, collaboratorEmail, nextPermission)
+      await shareTrip(trip.id, collaboratorEmail, nextPermission, false)
       setMessage(`Access updated to ${nextPermission === 'editor' ? 'Editor' : 'Viewer'}.`)
       await loadCollaborators()
     } catch (permissionError) {

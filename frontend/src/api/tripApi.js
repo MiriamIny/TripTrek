@@ -14,6 +14,19 @@ const readErrorMessage = async (response) => {
   }
 }
 
+const request = async (path, options = {}) => {
+  const response = await fetch(`${TRIP_API_ENDPOINT}${path.replace(/^\//, '')}`, options)
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response)
+    throw new Error(message || `Request failed (${response.status}).`)
+  }
+
+  return response
+}
+
+export const publicTripApiFetch = async (path, options = {}) => request(path, options)
+
 export const tripApiFetch = async (path, options = {}) => {
   const session = await fetchAuthSession()
   const token = session.tokens?.idToken?.toString()
@@ -23,15 +36,8 @@ export const tripApiFetch = async (path, options = {}) => {
   const headers = new Headers(options.headers || {})
   headers.set('Authorization', `Bearer ${token}`)
 
-  const response = await fetch(`${TRIP_API_ENDPOINT}${path.replace(/^\//, '')}`, {
+  return request(path, {
     ...options,
     headers,
   })
-
-  if (!response.ok) {
-    const message = await readErrorMessage(response)
-    throw new Error(message || `Request failed (${response.status}).`)
-  }
-
-  return response
 }

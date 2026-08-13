@@ -19,6 +19,22 @@ Parameters:
     Type: String
     Description: OpenAI model used by the Trekka travel assistant
     Default: ft:gpt-3.5-turbo-0125:personal:trekka:C1G5p4GH
+  SesIdentityName:
+    Type: String
+    Description: Verified SES identity used to send TripTrek emails
+    Default: trekatrip.com
+  SesSenderEmail:
+    Type: String
+    Description: From address under the verified SES identity
+    Default: hello@trekatrip.com
+  ContactRecipientEmail:
+    Type: String
+    Description: Private inbox that receives contact-form messages
+    NoEcho: true
+  AppBaseUrl:
+    Type: String
+    Description: Public TripTrek URL used in invitation emails
+    Default: https://www.trekatrip.com
 
 Resources:
 
@@ -38,6 +54,20 @@ Resources:
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
 
+  ContactRateLimitTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: rateKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: rateKey
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+
   TripTrekAPI:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -48,6 +78,7 @@ Resources:
           - POST
           - PATCH
           - DELETE
+          - OPTIONS
         AllowOrigins:
           - "*"
         AllowHeaders:
@@ -176,9 +207,16 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref TripTrekTable
+          SES_SENDER_EMAIL: !Ref SesSenderEmail
+          APP_BASE_URL: !Ref AppBaseUrl
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TripTrekTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentityName}
       Events:
         GetShares:
           Type: HttpApi
@@ -198,6 +236,38 @@ Resources:
             Path: /tripShares
             Method: DELETE
             ApiId: !Ref TripTrekAPI
+
+  contactMessage:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: contactMessage
+      Handler: index.handler
+      Runtime: nodejs22.x
+      CodeUri: contact/
+      Timeout: 10
+      MemorySize: 128
+      Environment:
+        Variables:
+          SES_SENDER_EMAIL: !Ref SesSenderEmail
+          CONTACT_RECIPIENT_EMAIL: !Ref ContactRecipientEmail
+          RATE_LIMIT_TABLE: !Ref ContactRateLimitTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ContactRateLimitTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentityName}
+      Events:
+        Contact:
+          Type: HttpApi
+          Properties:
+            Path: /contact
+            Method: POST
+            ApiId: !Ref TripTrekAPI
+            Auth:
+              Authorizer: NONE
 
   trekkaChat:
     Type: AWS::Serverless::Function

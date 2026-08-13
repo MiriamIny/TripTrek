@@ -82,6 +82,7 @@ describe('TripShareDialog', () => {
       'trip-1',
       'friend@example.com',
       'editor',
+      false,
     ))
   })
 })
