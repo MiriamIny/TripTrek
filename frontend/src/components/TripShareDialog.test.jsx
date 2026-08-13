@@ -2,8 +2,10 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TripShareDialog from './TripShareDialog'
 import { useTripContext } from '../context/TripContext'
+import { useAuth } from '../context/AuthContext'
 
 vi.mock('../context/TripContext', () => ({ useTripContext: vi.fn() }))
+vi.mock('../context/AuthContext', () => ({ useAuth: vi.fn() }))
 
 describe('TripShareDialog', () => {
   const getTripCollaborators = vi.fn()
@@ -26,13 +28,24 @@ describe('TripShareDialog', () => {
       shareTrip,
       removeTripCollaborator,
     })
+    useAuth.mockReturnValue({
+      userAttributes: {
+        name: 'Miriam Profile',
+        email: 'owner@example.com',
+        picture: 'https://example.com/miriam.jpg',
+      },
+    })
   })
 
   it('lists the owner and invites a viewer from the custom permission menu', async () => {
     render(<TripShareDialog trip={trip} onClose={vi.fn()} />)
 
-    await waitFor(() => expect(screen.getByText('Miriam Owner')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/Miriam Profile/)).toHaveTextContent('Miriam Profile (you)'))
     expect(screen.getByText('Owner')).toBeInTheDocument()
+    expect(document.querySelector('.trip-share-owner-row img')).toHaveAttribute(
+      'src',
+      'https://example.com/miriam.jpg',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Invitation permission: Editor' }))
     const listbox = screen.getByRole('listbox', { name: 'Invitation permission' })

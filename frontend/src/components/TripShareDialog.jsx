@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTripContext } from '../context/TripContext'
+import { useAuth } from '../context/AuthContext'
 import './TripShareDialog.css'
 
 const PERMISSION_OPTIONS = [
@@ -87,6 +88,7 @@ function PermissionDropdown({ value, onChange, disabled, label }) {
 
 export default function TripShareDialog({ trip, onClose }) {
   const { getTripCollaborators, shareTrip, removeTripCollaborator } = useTripContext()
+  const { userAttributes = {} } = useAuth()
   const [collaborators, setCollaborators] = useState([])
   const [email, setEmail] = useState('')
   const [permission, setPermission] = useState('editor')
@@ -94,7 +96,33 @@ export default function TripShareDialog({ trip, onClose }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [failedOwnerPicture, setFailedOwnerPicture] = useState('')
   const emailInputRef = useRef(null)
+  const ownerEmail = userAttributes.email || trip.ownerEmail || ''
+  const ownerName = userAttributes.name
+    || trip.ownerName
+    || ownerEmail.split('@')[0]
+    || 'Owner'
+  const ownerPicture = userAttributes.picture || ''
+  const showOwnerPicture = ownerPicture && ownerPicture !== failedOwnerPicture
+  const ownerRow = (
+    <li className="trip-share-owner-row">
+      <span className="trip-share-avatar" aria-hidden="true">
+        {showOwnerPicture ? (
+          <img
+            src={ownerPicture}
+            alt=""
+            onError={() => setFailedOwnerPicture(ownerPicture)}
+          />
+        ) : ownerName.charAt(0).toUpperCase()}
+      </span>
+      <span className="trip-share-person-copy">
+        <strong>{ownerName} <span className="trip-share-you-label">(you)</span></strong>
+        {ownerEmail && <small>{ownerEmail}</small>}
+      </span>
+      <span className="trip-share-owner-label">Owner</span>
+    </li>
+  )
 
   const loadCollaborators = useCallback(async () => {
     try {
@@ -241,16 +269,7 @@ export default function TripShareDialog({ trip, onClose }) {
             <p className="trip-share-loading">Loading access…</p>
           ) : collaborators.length ? (
             <ul>
-              <li className="trip-share-owner-row">
-                <span className="trip-share-avatar" aria-hidden="true">
-                  {(trip.ownerName || trip.ownerEmail || 'You').charAt(0).toUpperCase()}
-                </span>
-                <span className="trip-share-person-copy">
-                  <strong>{trip.ownerName || 'You'}</strong>
-                  {trip.ownerEmail && <small>{trip.ownerEmail}</small>}
-                </span>
-                <span className="trip-share-owner-label">Owner</span>
-              </li>
+              {ownerRow}
               {collaborators.map((collaborator) => (
                 <li key={collaborator.email}>
                   <span className="trip-share-avatar" aria-hidden="true">
@@ -279,16 +298,7 @@ export default function TripShareDialog({ trip, onClose }) {
             </ul>
           ) : (
             <ul>
-              <li className="trip-share-owner-row">
-                <span className="trip-share-avatar" aria-hidden="true">
-                  {(trip.ownerName || trip.ownerEmail || 'You').charAt(0).toUpperCase()}
-                </span>
-                <span className="trip-share-person-copy">
-                  <strong>{trip.ownerName || 'You'}</strong>
-                  {trip.ownerEmail && <small>{trip.ownerEmail}</small>}
-                </span>
-                <span className="trip-share-owner-label">Owner</span>
-              </li>
+              {ownerRow}
             </ul>
           )}
         </div>

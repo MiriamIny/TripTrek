@@ -333,9 +333,21 @@
   font-weight: 800;
   place-items: center;
 }
+.trip-share-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
 .trip-share-person-copy { display: flex; min-width: 0; flex-direction: column; gap: 0.18rem; }
 .trip-share-person-copy strong { overflow: hidden; font-size: 0.82rem; text-overflow: ellipsis; white-space: nowrap; }
 .trip-share-person-copy small { color: #6a787a; font-size: 0.7rem; }
+.trip-share-you-label {
+  color: #6a787a;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
 .trip-share-people .trip-share-permission-trigger {
   min-height: 36px;
   padding: 0.42rem 0.55rem;
