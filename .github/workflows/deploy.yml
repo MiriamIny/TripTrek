@@ -64,6 +64,7 @@ jobs:
             --no-fail-on-empty-changeset \
             --stack-name TripTrekStack \
             --capabilities CAPABILITY_IAM \
+            --no-resolve-s3 \
             --s3-bucket ${{ secrets.SAM_S3_BUCKET }} \
             --region ${{ secrets.AWS_REGION }} \
             --parameter-overrides ImageUploadBucket=${{ secrets.IMAGE_UPLOAD_BUCKET }}

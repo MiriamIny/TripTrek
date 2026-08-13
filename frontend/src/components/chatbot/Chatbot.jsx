@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTripContext } from '../../context/TripContext'
 import { useAuth } from '../../context/AuthContext'
+import { tripApiFetch } from '../../api/tripApi'
 import './Chatbot.css'
 
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY
-const FINETUNED_MODEL_ID = 'ft:gpt-3.5-turbo-0125:personal:trekka:C1G5p4GH'
 const DEFAULT_SUGGESTIONS = [
   'Find me a budget-friendly getaway',
   'Show me underrated travel spots',
@@ -37,7 +36,7 @@ const Chatbot = () => {
   const followupTripRef = useRef(null)
   const location = useLocation()
   const { getTripById } = useTripContext()
-  const { isAuthenticated, userAttributes } = useAuth()
+  const { isAuthenticated, userAttributes, openAuth } = useAuth()
 
   const tripId = location.pathname.match(/^\/trips\/([^/]+)/)?.[1] || null
   const tripData = tripId ? getTripById(tripId) : null
@@ -90,37 +89,28 @@ const Chatbot = () => {
 
   useEffect(() => {
     const currentTripKey = tripData?.id || tripData?.sk
-    if (!hasShownIntro || !tripData || !currentTripKey || followupTripRef.current === currentTripKey) return
+    if (!isAuthenticated || !hasShownIntro || !tripData || !currentTripKey
+      || followupTripRef.current === currentTripKey) return
     followupTripRef.current = currentTripKey
 
     const generateFollowup = async () => {
       try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await tripApiFetch('chat', {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: FINETUNED_MODEL_ID,
-            messages: [
-              {
-                role: 'system',
-                content: `Give a short, helpful follow-up message and three suggestion prompts. Respond only as valid JSON in this format: {"followup":"text","suggestions":["one","two","three"]}. Today's date is ${new Date().toLocaleDateString()}.`,
-              },
-              {
-                role: 'user',
-                content: `I'm planning a trip to ${tripData.destination}. Here's my itinerary: ${JSON.stringify(tripData.itinerary, null, 2)}`,
-              },
-            ],
-            temperature: 0.7,
+            mode: 'followup',
+            trip: {
+              destination: tripData.destination,
+              itinerary: tripData.itinerary,
+            },
           }),
         })
-        if (!response.ok) throw new Error(`Follow-up request failed (${response.status})`)
         const data = await response.json()
-        const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}')
-        if (parsed.followup) setMessages((previous) => [...previous, { sender: 'bot', text: parsed.followup }])
-        if (parsed.suggestions?.length) setSuggestions(parsed.suggestions)
+        if (data.followup) setMessages((previous) => [...previous, { sender: 'bot', text: data.followup }])
+        if (data.suggestions?.length) setSuggestions(data.suggestions)
         if (!isOpen) setHasNotification(true)
       } catch (error) {
         console.error('Error generating AI follow-up:', error)
@@ -128,7 +118,7 @@ const Chatbot = () => {
     }
 
     generateFollowup()
-  }, [hasShownIntro, isOpen, tripData])
+  }, [hasShownIntro, isAuthenticated, isOpen, tripData])
 
   const toggleChat = () => {
     if (!isOpen) showIntro()
@@ -138,6 +128,14 @@ const Chatbot = () => {
   const sendMessage = async (text) => {
     const trimmedText = text.trim()
     if (!trimmedText || isTyping) return
+    if (!isAuthenticated) {
+      setMessages((previous) => [...previous, {
+        sender: 'bot',
+        text: 'Please sign in to chat with Trekka and keep your travel planning secure.',
+      }])
+      openAuth()
+      return
+    }
 
     const newMessages = [...messages, { sender: 'user', text: trimmedText }]
     setMessages(newMessages)
@@ -146,32 +144,26 @@ const Chatbot = () => {
     setIsTyping(true)
 
     try {
-      if (!OPENAI_API_KEY) throw new Error('Trekka is not configured yet.')
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await tripApiFetch('chat', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: FINETUNED_MODEL_ID,
-          messages: [
-            {
-              role: 'system',
-              content: `You are Trekka, Trek a Trip's friendly travel assistant. Give concise, practical planning help.${tripData ? ` The user is planning a trip to ${tripData.destination}. Their itinerary is: ${JSON.stringify(tripData.itinerary, null, 2)}` : ''}`,
-            },
-            ...newMessages.map((message) => ({
-              role: message.sender === 'user' ? 'user' : 'assistant',
-              content: message.text,
-            })),
-          ],
-          temperature: 0.7,
+          mode: 'chat',
+          messages: newMessages.map((message) => ({
+            role: message.sender === 'user' ? 'user' : 'assistant',
+            content: message.text,
+          })),
+          trip: tripData ? {
+            destination: tripData.destination,
+            itinerary: tripData.itinerary,
+          } : null,
         }),
       })
-      if (!response.ok) throw new Error(`Trekka request failed (${response.status})`)
 
       const data = await response.json()
-      const botReply = data.choices?.[0]?.message?.content?.trim()
+      const botReply = data.reply?.trim()
       if (!botReply) throw new Error('Trekka returned an empty response.')
 
       const words = botReply.split(/\s+/)
