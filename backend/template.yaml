@@ -210,14 +210,14 @@ Resources:
       MemorySize: 256
       Environment:
         Variables:
-          OPENAI_SECRET_ID: TripTrek/openai
+          OPENAI_SECRET_ID: TrekATrip/openai
           OPENAI_MODEL: !Ref OpenAIModel
       Policies:
         - Statement:
             - Effect: Allow
               Action:
                 - secretsmanager:GetSecretValue
-              Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:TripTrek/openai-*
+              Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:TrekATrip/openai-*
       Events:
         Chat:
           Type: HttpApi

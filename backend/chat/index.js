@@ -1,7 +1,7 @@
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager'
 
 const secrets = new SecretsManagerClient({})
-const SECRET_ID = process.env.OPENAI_SECRET_ID || 'TripTrek/openai'
+const SECRET_ID = process.env.OPENAI_SECRET_ID || 'TrekATrip/openai'
 const MODEL = process.env.OPENAI_MODEL || 'ft:gpt-3.5-turbo-0125:personal:trekka:C1G5p4GH'
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
 const MAX_MESSAGES = 12
