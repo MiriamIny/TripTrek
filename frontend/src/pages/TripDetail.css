@@ -296,6 +296,38 @@
   margin-top: clamp(3rem, 6vw, 5rem);
 }
 
+.trip-detail-save-error {
+  display: flex;
+  margin-top: 1rem;
+  padding: 0.8rem 0.9rem;
+  color: #7f332a;
+  background: #fff3ef;
+  border: 1px solid rgba(166, 63, 50, 0.22);
+  border-radius: 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.trip-detail-save-error button {
+  padding: 0.42rem 0.65rem;
+  color: #7f332a;
+  background: #fff;
+  border: 1px solid rgba(127, 51, 42, 0.3);
+  border-radius: 8px;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.trip-detail-save-error button:hover {
+  border-color: #7f332a;
+}
+
 .trip-detail-edit-section {
   padding: clamp(1rem, 2vw, 1.5rem);
   background: rgba(255, 255, 255, 0.45);
@@ -643,6 +675,11 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 0.55rem;
+  }
+
+  .trip-detail-save-error {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .trip-detail-section-heading > p {

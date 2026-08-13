@@ -168,7 +168,7 @@ describe('TripList', () => {
     render(<TripList />)
 
     expect(screen.getByRole('heading', { name: /all trips/i })).toBeInTheDocument()
-    expect(screen.getByText('1 saved trip · 3 planned activities')).toBeInTheDocument()
+    expect(screen.getByText('1 trip · 3 planned activities')).toBeInTheDocument()
     expect(screen.getByText('May 10 – May 14, 2027')).toBeInTheDocument()
     expect(screen.getByText('5 days')).toBeInTheDocument()
     expect(screen.getByText('3 activities')).toBeInTheDocument()

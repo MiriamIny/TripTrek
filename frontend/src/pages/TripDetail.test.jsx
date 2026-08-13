@@ -98,6 +98,8 @@ const mockTripContext = {
 
   saveTrip: vi.fn(),
 
+  fetchTrips: vi.fn(),
+
   getTripById: vi.fn((id) => id === mockTripId ? mockTrip : null)
 
 }
@@ -163,6 +165,8 @@ describe('TripDetail', () => {
     mockTripContext.getTripById = vi.fn((id) => id === mockTripId ? mockTrip : null)
 
     mockTripContext.saveTrip = vi.fn().mockResolvedValue()
+
+    mockTripContext.fetchTrips = vi.fn().mockResolvedValue()
 
   })
  
@@ -434,6 +438,41 @@ describe('TripDetail', () => {
  
     expect(screen.getByText('Paris')).toBeInTheDocument()
 
+  })
+
+  it('shows view-only access without edit controls for a viewer', async () => {
+    const viewerTrip = {
+      ...mockTrip,
+      access: 'viewer',
+      sharedByName: 'Miriam',
+    }
+    mockTripContext.trips = [viewerTrip]
+    mockTripContext.getTripById = vi.fn(() => viewerTrip)
+
+    renderWithProviders(<TripDetail />)
+
+    await waitFor(() => expect(screen.getByText('Viewer')).toBeInTheDocument())
+    expect(screen.getByText('Shared by Miriam')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit Trip' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Share Trip' })).not.toBeInTheDocument()
+  })
+
+  it('offers to load the latest trip when a concurrent edit conflicts', async () => {
+    mockTripContext.saveTrip = vi.fn().mockRejectedValue(new Error(
+      'This trip changed since you opened it. Refresh the trip and review the latest changes before saving again.',
+    ))
+
+    renderWithProviders(<TripDetail />)
+    await waitFor(() => expect(screen.getByText('Edit Trip')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Edit Trip'))
+    fireEvent.change(screen.getByLabelText('Destination'), { target: { value: 'Updated Paris' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(
+      'This trip changed since you opened it',
+    ))
+    fireEvent.click(screen.getByRole('button', { name: 'Load latest changes' }))
+    await waitFor(() => expect(mockTripContext.fetchTrips).toHaveBeenCalledTimes(1))
   })
 
 })

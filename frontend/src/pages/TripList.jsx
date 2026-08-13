@@ -128,7 +128,11 @@ export default function TripList() {
   }, [saveTrip])
 
   const handleDelete = useCallback(async (tripId) => {
-    if (window.confirm('Are you sure you want to delete this trip?')) {
+    const trip = trips.find((candidate) => candidate.id === tripId)
+    const prompt = trip?.access && trip.access !== 'owner'
+      ? 'Leave this shared trip? It will be removed from your trips, but the owner will keep it.'
+      : 'Delete this trip for everyone? This cannot be undone.'
+    if (window.confirm(prompt)) {
       setOperationLoading(true)
       try {
         await deleteTrip(tripId)
@@ -139,7 +143,7 @@ export default function TripList() {
         setOperationLoading(false)
       }
     }
-  }, [deleteTrip])
+  }, [deleteTrip, trips])
 
   const handleTripClick = useCallback((tripId) => {
     navigate(`/trips/${tripId}`)
@@ -195,6 +199,7 @@ export default function TripList() {
   const isLoading = loading || operationLoading
   const hasTrips = trips.length > 0
   const totalActivities = trips.reduce((total, trip) => total + getActivityCount(trip), 0)
+  const sharedTripCount = trips.filter((trip) => trip.access && trip.access !== 'owner').length
 
   if (showForm) {
     return (
@@ -271,7 +276,8 @@ export default function TripList() {
               <div>
                 <h2 id="saved-trips-heading">All trips</h2>
                 <p>
-                  {pluralize(trips.length, 'saved trip')}
+                  {pluralize(trips.length, 'trip')}
+                  {sharedTripCount > 0 ? ` · ${pluralize(sharedTripCount, 'shared with you')}` : ''}
                   {totalActivities > 0 ? ` · ${pluralize(totalActivities, 'planned activity', 'planned activities')}` : ''}
                 </p>
               </div>
@@ -298,7 +304,11 @@ export default function TripList() {
                             <RouteMark />
                           </span>
                         )}
-                        <span className="trip-card-saved-label">Saved trip</span>
+                        <span className="trip-card-saved-label">
+                          {!trip.access || trip.access === 'owner'
+                            ? 'Owner'
+                            : trip.access === 'viewer' ? 'Viewer' : 'Editor'}
+                        </span>
                       </span>
 
                       <span className="trip-card-content">
@@ -318,6 +328,12 @@ export default function TripList() {
                           {formatTripDates(trip.startDate, trip.endDate)}
                         </span>
 
+                        {trip.access && trip.access !== 'owner' && (
+                          <span className="trip-card-shared-by">
+                            Shared by {trip.sharedByName || trip.sharedByEmail || 'a travel companion'}
+                          </span>
+                        )}
+
                         <span className="trip-card-meta">
                           {duration && <span>{pluralize(duration, 'day')}</span>}
                           {activityCount > 0 && <span>{pluralize(activityCount, 'activity', 'activities')}</span>}
@@ -331,11 +347,19 @@ export default function TripList() {
                       className="trip-card-delete"
                       onClick={() => handleDelete(trip.id)}
                       disabled={isLoading}
-                      aria-label={`Delete trip to ${trip.destination}`}
+                      aria-label={trip.access && trip.access !== 'owner'
+                        ? `Leave shared trip to ${trip.destination}`
+                        : `Delete trip to ${trip.destination}`}
                     >
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
-                      </svg>
+                      {trip.access && trip.access !== 'owner' ? (
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
+                        </svg>
+                      )}
                     </button>
                   </article>
                 )

@@ -6,7 +6,15 @@ Parameters:
   ImageUploadBucket:
     Type: String
     Description: S3 bucket for uploaded location images
-    Default: wits-triptrek-images
+    Default: trek-a-trip-images-bucket
+  CognitoUserPoolId:
+    Type: String
+    Description: Cognito user pool that authenticates TripTrek API requests
+    Default: us-east-1_Ks6i9yln5
+  CognitoUserPoolClientId:
+    Type: String
+    Description: Cognito app client used by the TripTrek frontend
+    Default: 3n8imnlps0an3lj9rp2umi7bu6
 
 Resources:
 
@@ -40,6 +48,15 @@ Resources:
           - "*"
         AllowHeaders:
           - "*"
+      Auth:
+        Authorizers:
+          CognitoJwtAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}
+              audience:
+                - !Ref CognitoUserPoolClientId
+            IdentitySource: "$request.header.Authorization"
+        DefaultAuthorizer: CognitoJwtAuthorizer
 
   LocationImagesBucket:
     Type: AWS::S3::Bucket
@@ -68,9 +85,12 @@ Resources:
       Handler: index.handler
       Runtime: nodejs22.x 
       CodeUri: create/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TripTrekTable
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: TripTrek
+            TableName: !Ref TripTrekTable
       Events:
         ApiForMyApp:
           Type: HttpApi
@@ -86,9 +106,12 @@ Resources:
       Handler: index.handler
       Runtime: nodejs22.x
       CodeUri: read/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TripTrekTable
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: TripTrek
+            TableName: !Ref TripTrekTable
       Events:
         ApiForMyApp:
           Type: HttpApi
@@ -104,9 +127,12 @@ Resources:
       Handler: index.handler
       Runtime: nodejs22.x
       CodeUri: update/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TripTrekTable
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: TripTrek
+            TableName: !Ref TripTrekTable
       Events:
         ApiForMyApp:
           Type: HttpApi
@@ -122,14 +148,50 @@ Resources:
       Handler: index.handler
       Runtime: nodejs22.x
       CodeUri: delete/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TripTrekTable
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: TripTrek
+            TableName: !Ref TripTrekTable
       Events:
         ApiForMyApp:
           Type: HttpApi
           Properties:
             Path: /deleteTrip
+            Method: DELETE
+            ApiId: !Ref TripTrekAPI
+
+  tripShares:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: tripShares
+      Handler: index.handler
+      Runtime: nodejs22.x
+      CodeUri: share/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TripTrekTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TripTrekTable
+      Events:
+        GetShares:
+          Type: HttpApi
+          Properties:
+            Path: /tripShares
+            Method: GET
+            ApiId: !Ref TripTrekAPI
+        CreateShare:
+          Type: HttpApi
+          Properties:
+            Path: /tripShares
+            Method: POST
+            ApiId: !Ref TripTrekAPI
+        DeleteShare:
+          Type: HttpApi
+          Properties:
+            Path: /tripShares
             Method: DELETE
             ApiId: !Ref TripTrekAPI
   

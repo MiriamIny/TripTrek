@@ -1,60 +1,58 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+import { BatchWriteCommand, DynamoDBDocumentClient, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 
-const client = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(client);
-
+const db = DynamoDBDocumentClient.from(new DynamoDBClient({}))
+const TABLE_NAME = process.env.TABLE_NAME || 'TripTrek'
 const headers = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  'Access-Control-Allow-Methods': 'DELETE,OPTIONS',
+}
+const response = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) })
+
+const deleteKeys = async (keys) => {
+  for (let index = 0; index < keys.length; index += 25) {
+    let requests = keys.slice(index, index + 25).map((Key) => ({ DeleteRequest: { Key } }))
+    do {
+      const result = await db.send(new BatchWriteCommand({
+        RequestItems: { [TABLE_NAME]: requests },
+      }))
+      requests = result.UnprocessedItems?.[TABLE_NAME] || []
+    } while (requests.length)
+  }
+}
 
 export const handler = async (event) => {
-  console.log("Incoming event:", event);
-
-  const tripId = event?.queryStringParameters?.tripId;
-  const userId = event?.queryStringParameters?.userId;
-
-  if (!tripId || !userId) {
-    return {
-      statusCode: 400,
-      headers,
-      body: JSON.stringify("Missing 'tripId' or 'userId' in query string"),
-    };
-  }
-
-  const params = {
-    TableName: "TripTrek",
-    Key: {
-      pk: userId,
-      sk: tripId,
-    },
-    ReturnValues: "ALL_OLD",
-  };
+  const claims = event?.requestContext?.authorizer?.jwt?.claims || {}
+  const userId = claims.sub
+  const tripId = event?.queryStringParameters?.tripId
+  if (!userId) return response(401, { message: 'Authentication is required.' })
+  if (!tripId) return response(400, { message: 'A trip ID is required.' })
 
   try {
-    const result = await ddbDocClient.send(new DeleteCommand(params));
+    const trip = await db.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: { pk: userId, sk: tripId },
+    }))
+    if (!trip.Item) return response(404, { message: 'Trip not found.' })
 
-    if (!result.Attributes) {
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify(`Trip with ID '${tripId}' not found for user '${userId}'.`),
-      };
-    }
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify("Trip deleted successfully"),
-    };
-  } catch (err) {
-    console.error("Error deleting trip from DynamoDB", err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify("Error deleting trip from DynamoDB"),
-    };
+    const shareResult = await db.send(new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'pk = :trip',
+      ExpressionAttributeValues: { ':trip': `TRIP#${userId}#${tripId}` },
+    }))
+    const shareRows = shareResult.Items || []
+    const keys = [
+      { pk: userId, sk: tripId },
+      ...shareRows.flatMap((share) => [
+        { pk: share.pk, sk: share.sk },
+        { pk: `INVITEE#${share.email}`, sk: `TRIP#${userId}#${tripId}` },
+      ]),
+    ]
+    await deleteKeys(keys)
+    return response(200, { message: 'Trip deleted successfully.' })
+  } catch (error) {
+    console.error('Error deleting trip:', error)
+    return response(500, { message: 'Unable to delete the trip.' })
   }
-};
+}
