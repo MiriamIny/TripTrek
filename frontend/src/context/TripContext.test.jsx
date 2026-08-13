@@ -153,13 +153,23 @@ describe('TripContext', () => {
       .mockResolvedValueOnce(response({}))
 
     await expect(result.current.getTripCollaborators('trip-1')).resolves.toHaveLength(1)
-    await result.current.shareTrip('trip-1', 'friend@example.com', 'viewer')
+    await result.current.shareTrip(
+      'trip-1',
+      'friend@example.com',
+      'viewer',
+      true,
+      'Let’s plan this together!',
+    )
     await result.current.removeTripCollaborator('trip-1', 'friend@example.com')
 
     expect(tripApiFetch.mock.calls[0][0]).toBe('tripShares?tripId=trip-1')
     expect(tripApiFetch.mock.calls[1][0]).toBe('tripShares')
     expect(JSON.parse(tripApiFetch.mock.calls[1][1].body)).toEqual({
-      tripId: 'trip-1', email: 'friend@example.com', permission: 'viewer', sendEmail: true,
+      tripId: 'trip-1',
+      email: 'friend@example.com',
+      permission: 'viewer',
+      sendEmail: true,
+      invitationMessage: 'Let’s plan this together!',
     })
     expect(tripApiFetch.mock.calls[2]).toEqual([
       'tripShares?tripId=trip-1&email=friend%40example.com',

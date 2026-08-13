@@ -40,7 +40,12 @@ describe('tripShares invitation email', () => {
 
   it('emails a newly invited collaborator', async () => {
     const { handler } = await import('./index.js')
-    const result = await handler(event({ tripId: 'trip-1', email: 'friend@example.com', permission: 'viewer' }))
+    const result = await handler(event({
+      tripId: 'trip-1',
+      email: 'friend@example.com',
+      permission: 'viewer',
+      invitationMessage: 'Can’t wait!\nBring your hiking boots <script>alert(1)</script>',
+    }))
     const body = JSON.parse(result.body)
 
     expect(result.statusCode).toBe(201)
@@ -50,6 +55,26 @@ describe('tripShares invitation email', () => {
       Destination: { ToAddresses: ['friend@example.com'] },
       ReplyToAddresses: ['owner@example.com'],
     })
+    const email = sesSend.mock.calls[0][0].Content.Simple.Body
+    expect(email.Text.Data).toContain('Can’t wait!\nBring your hiking boots')
+    expect(email.Html.Data).toContain('Can’t wait!\nBring your hiking boots')
+    expect(email.Html.Data).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(email.Html.Data).not.toContain('<script>alert(1)</script>')
+  })
+
+  it('rejects an invitation message longer than 500 characters before writing access', async () => {
+    const { handler } = await import('./index.js')
+    const result = await handler(event({
+      tripId: 'trip-1',
+      email: 'friend@example.com',
+      permission: 'viewer',
+      invitationMessage: 'x'.repeat(501),
+    }))
+
+    expect(result.statusCode).toBe(400)
+    expect(JSON.parse(result.body).message).toMatch(/500 characters/)
+    expect(dbSend).not.toHaveBeenCalled()
+    expect(sesSend).not.toHaveBeenCalled()
   })
 
   it('skips email for permission-only updates', async () => {

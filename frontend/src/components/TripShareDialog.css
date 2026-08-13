@@ -110,7 +110,8 @@
   gap: 0.55rem;
 }
 
-.trip-share-form input {
+.trip-share-form input,
+.trip-share-form textarea {
   width: 100%;
   min-width: 0;
   min-height: 46px;
@@ -124,10 +125,40 @@
   text-align: left;
 }
 
-.trip-share-form input:focus {
+.trip-share-form textarea {
+  min-height: 78px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.trip-share-form input:focus,
+.trip-share-form textarea:focus {
   border-color: #167b35;
   box-shadow: 0 0 0 3px rgba(22, 123, 53, 0.12);
   outline: 0;
+}
+
+.trip-share-form .trip-share-message-field {
+  display: block;
+  margin-top: 0.8rem;
+}
+
+.trip-share-message-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trip-share-message-label label {
+  margin-bottom: 0.42rem;
+}
+
+.trip-share-message-label label span,
+.trip-share-message-label small {
+  color: #718083;
+  font-size: 0.68rem;
+  font-weight: 600;
 }
 
 .trip-share-submit {
