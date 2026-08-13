@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { eachDayOfInterval, format, parse } from 'date-fns';
 import imageCompression from 'browser-image-compression';
+import { APIProvider } from '@vis.gl/react-google-maps';
 import { useTripContext } from '../context/TripContext';
 import { useAuth } from '../context/AuthContext';
 import ActivityTimeSelect from './ActivityTimeSelect';
+import PlaceAddressAutocomplete from './PlaceAddressAutocomplete';
 import TripDatePicker from './TripDatePicker';
 import './TripForm.css';
 
@@ -70,7 +72,7 @@ function CalendarIcon() {
   );
 }
 
-export default function TripForm({ trip = {}, onSave, onCancel }) {
+function TripFormContent({ trip = {}, onSave, onCancel, mapsEnabled = false }) {
   const { uploadTripImage } = useTripContext();
   const { user } = useAuth();
   const [imageUrl, setImageUrl] = useState(trip.imageUrl || '');
@@ -85,6 +87,7 @@ export default function TripForm({ trip = {}, onSave, onCancel }) {
   );
   const [newActivityTime, setNewActivityTime] = useState({});
   const [newActivityName, setNewActivityName] = useState({});
+  const [newActivityLocation, setNewActivityLocation] = useState({});
   const [editingActivity, setEditingActivity] = useState(null);
   const [draggedActivity, setDraggedActivity] = useState(null);
   const [error, setError] = useState('');
@@ -126,16 +129,18 @@ export default function TripForm({ trip = {}, onSave, onCancel }) {
   const handleAddActivity = (date) => {
     const time = newActivityTime[date];
     const name = newActivityName[date]?.trim();
+    const location = newActivityLocation[date]?.trim() || '';
     if (!name) return;
 
     const formattedTime = time ? formatTime12Hour(time) : '';
     setItinerary((previous) => previous.map((day) => {
       if (day.date !== date) return day;
-      const activities = orderActivities([...day.activities, { time: formattedTime, name }]);
+      const activities = orderActivities([...day.activities, { time: formattedTime, name, location }]);
       return { ...day, activities };
     }));
     setNewActivityTime((previous) => ({ ...previous, [date]: '' }));
     setNewActivityName((previous) => ({ ...previous, [date]: '' }));
+    setNewActivityLocation((previous) => ({ ...previous, [date]: '' }));
   };
 
   const handleRemoveActivity = (date, index) => {
@@ -155,6 +160,7 @@ export default function TripForm({ trip = {}, onSave, onCancel }) {
       index,
       name: activity.name,
       time: toPickerTime(activity.time),
+      location: activity.location || '',
     });
   };
 
@@ -169,6 +175,8 @@ export default function TripForm({ trip = {}, onSave, onCancel }) {
               ...activity,
               name: editingActivity.name.trim(),
               time: editingActivity.time ? formatTime12Hour(editingActivity.time) : '',
+              location: editingActivity.location?.trim() || '',
+              mapExcluded: editingActivity.location?.trim() ? false : activity.mapExcluded,
             }
           : activity
       ));
@@ -418,6 +426,51 @@ export default function TripForm({ trip = {}, onSave, onCancel }) {
                                       autoFocus
                                     />
                                   </div>
+                                  <div className="trip-form-activity-field trip-form-location-field">
+                                    <label className="trip-form-mobile-label" htmlFor={`edit-location-${dayIndex}-${activityIndex}`}>
+                                      Map location · optional
+                                    </label>
+                                    {mapsEnabled ? (
+                                      <PlaceAddressAutocomplete
+                                        id={`edit-location-${dayIndex}-${activityIndex}`}
+                                        type="text"
+                                        value={editingActivity.location}
+                                        placeholder="Venue or address"
+                                        aria-describedby={`edit-location-help-${dayIndex}-${activityIndex}`}
+                                        destination={destination}
+                                        onChange={(value) => setEditingActivity((current) => ({
+                                          ...current,
+                                          location: value,
+                                        }))}
+                                        onKeyDown={(event) => {
+                                          if (event.key === 'Enter') {
+                                            event.preventDefault();
+                                            saveEditedActivity();
+                                          }
+                                          if (event.key === 'Escape') setEditingActivity(null);
+                                        }}
+                                      />
+                                    ) : (
+                                      <input
+                                        id={`edit-location-${dayIndex}-${activityIndex}`}
+                                        type="text"
+                                        value={editingActivity.location}
+                                        placeholder="Venue or address"
+                                        aria-describedby={`edit-location-help-${dayIndex}-${activityIndex}`}
+                                        onChange={(event) => setEditingActivity((current) => ({
+                                          ...current,
+                                          location: event.target.value,
+                                        }))}
+                                        onKeyDown={(event) => {
+                                          if (event.key === 'Enter') {
+                                            event.preventDefault();
+                                            saveEditedActivity();
+                                          }
+                                          if (event.key === 'Escape') setEditingActivity(null);
+                                        }}
+                                      />
+                                    )}
+                                  </div>
                                   <div className="trip-form-editor-actions">
                                     <button type="button" onClick={() => setEditingActivity(null)}>Cancel</button>
                                     <button
@@ -525,6 +578,45 @@ export default function TripForm({ trip = {}, onSave, onCancel }) {
                           }}
                         />
                       </div>
+                      <div className="trip-form-activity-field trip-form-location-field">
+                        <span className="trip-form-mobile-label">Map location · optional</span>
+                        {mapsEnabled ? (
+                          <PlaceAddressAutocomplete
+                            type="text"
+                            aria-label={`Map location for activity on day ${dayIndex + 1}`}
+                            placeholder="Venue or address"
+                            value={newActivityLocation[day.date] || ''}
+                            destination={destination}
+                            onChange={(value) => setNewActivityLocation((previous) => ({
+                              ...previous,
+                              [day.date]: value,
+                            }))}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault();
+                                handleAddActivity(day.date);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            aria-label={`Map location for activity on day ${dayIndex + 1}`}
+                            placeholder="Venue or address"
+                            value={newActivityLocation[day.date] || ''}
+                            onChange={(event) => setNewActivityLocation((previous) => ({
+                              ...previous,
+                              [day.date]: event.target.value,
+                            }))}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault();
+                                handleAddActivity(day.date);
+                              }
+                            }}
+                          />
+                        )}
+                      </div>
                       <button
                         type="button"
                         className="trip-form-add-button"
@@ -630,5 +722,17 @@ export default function TripForm({ trip = {}, onSave, onCancel }) {
         </div>
       </footer>
     </form>
+  );
+}
+
+export default function TripForm(props) {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  if (!apiKey) return <TripFormContent {...props} />;
+
+  return (
+    <APIProvider apiKey={apiKey} version="beta">
+      <TripFormContent {...props} mapsEnabled />
+    </APIProvider>
   );
 }
