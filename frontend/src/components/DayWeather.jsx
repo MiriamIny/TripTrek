@@ -150,7 +150,6 @@ function WeatherLocationCard({ location, dayPlan }) {
             <div className="trip-day-weather-hourly-wrap">
               <div className="trip-day-weather-hourly-heading">
                 <strong>Hourly forecast</strong>
-                <span>Swipe to explore</span>
               </div>
               <div className="trip-day-weather-hourly" aria-label="Hourly forecast">
                 {weather.hourly.map((hour, index) => {
