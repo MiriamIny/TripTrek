@@ -125,7 +125,10 @@ function WeatherLocationCard({ location, dayPlan }) {
 
           <div className="trip-day-weather-periods" aria-label="Daytime and nighttime summary">
             {(weather.forecast.periods || []).map((period) => (
-                <section key={period.label}>
+                <section
+                  key={period.label}
+                  className={period.label === 'Nighttime' ? 'is-nighttime' : 'is-daytime'}
+                >
                   <div className="trip-day-weather-period-heading">
                     <span>{period.label}</span>
                     <strong>{temperature(period.temperature)}</strong>
@@ -150,8 +153,20 @@ function WeatherLocationCard({ location, dayPlan }) {
                 <span>Swipe to explore</span>
               </div>
               <div className="trip-day-weather-hourly" aria-label="Hourly forecast">
-                {weather.hourly.map((hour) => (
-                  <section key={hour.hour} aria-label={`${formatHour(hour.hour)}: ${hour.description}`}>
+                {weather.hourly.map((hour, index) => {
+                  const previousHour = weather.hourly[index - 1];
+                  const transition = previousHour?.isDaytime === false && hour.isDaytime === true
+                    ? ' is-sunrise'
+                    : previousHour?.isDaytime === true && hour.isDaytime === false
+                      ? ' is-sunset'
+                      : '';
+                  const timeOfDay = hour.isDaytime === false ? 'is-nighttime' : 'is-daytime';
+                  return (
+                  <section
+                    key={hour.hour}
+                    className={`${timeOfDay}${transition}`}
+                    aria-label={`${formatHour(hour.hour)}: ${hour.description}`}
+                  >
                     <time>{formatHour(hour.hour)}</time>
                     {hour.iconUrl && <img src={hour.iconUrl} alt="" />}
                     <strong>{temperature(hour.temperature)}</strong>
@@ -160,7 +175,8 @@ function WeatherLocationCard({ location, dayPlan }) {
                       {hour.description}
                     </small>
                   </section>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : (
