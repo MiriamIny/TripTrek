@@ -72,13 +72,15 @@ export const handler = async (event = {}) => {
   try {
     const apiKey = await getApiKey()
     const weatherUrl = new URL('https://weather.googleapis.com/v1/forecast/days:lookup')
-    weatherUrl.searchParams.set('key', apiKey)
     weatherUrl.searchParams.set('location.latitude', latitude)
     weatherUrl.searchParams.set('location.longitude', longitude)
     weatherUrl.searchParams.set('days', '10')
     weatherUrl.searchParams.set('pageSize', '10')
     weatherUrl.searchParams.set('unitsSystem', 'IMPERIAL')
-    const weatherResponse = await fetch(weatherUrl, { signal: AbortSignal.timeout(8000) })
+    const weatherResponse = await fetch(weatherUrl, {
+      headers: { 'X-Goog-Api-Key': apiKey },
+      signal: AbortSignal.timeout(8000),
+    })
     const weather = await weatherResponse.json()
     if (!weatherResponse.ok) {
       console.error('Weather API request failed', { status: weatherResponse.status, error: weather.error?.status })
