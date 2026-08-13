@@ -2,6 +2,6 @@
   "name": "triptrek-backend",
   "private": true,
   "scripts": {
-    "install-all": "npm --prefix create install && npm --prefix read install && npm --prefix update install && npm --prefix delete install && npm --prefix images install && npm --prefix share install && npm --prefix chat install"
+    "install-all": "npm --prefix create install && npm --prefix read install && npm --prefix update install && npm --prefix delete install && npm --prefix images install && npm --prefix share install && npm --prefix chat install && npm --prefix weather install"
   }
 }

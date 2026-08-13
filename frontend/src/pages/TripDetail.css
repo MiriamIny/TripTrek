@@ -410,13 +410,155 @@
   margin-top: 0.14rem;
 }
 
-.trip-detail-day ul {
+.trip-detail-day-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.8rem;
+}
+
+.trip-detail-day-map-toggle {
+  display: inline-flex;
+  min-height: 34px;
+  padding: 0.42rem 0.65rem;
+  color: var(--detail-green-dark);
+  background: #fff;
+  border: 1px solid rgba(22, 123, 53, 0.18);
+  border-radius: 9px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  font: inherit;
+  font-size: 0.69rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.trip-detail-day-map-toggle:hover {
+  color: var(--detail-green);
+  border-color: rgba(22, 123, 53, 0.42);
+  box-shadow: 0 4px 12px rgba(22, 123, 53, 0.08);
+}
+
+.trip-detail-day-map-toggle svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.trip-day-weather-card {
+  position: relative;
+  padding: 0.8rem 2.6rem 0.8rem 1rem;
+  color: var(--detail-ink);
+  background: linear-gradient(110deg, #eff8f6, #f8fbf3);
+  border-bottom: 1px solid rgba(38, 59, 61, 0.08);
+}
+
+.trip-day-weather-card > p {
+  margin: 0;
+  color: var(--detail-muted);
+  font-size: 0.72rem;
+}
+
+.trip-day-weather-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.65rem;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--detail-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.trip-day-weather-content {
+  display: grid;
+  grid-template-columns: 48px minmax(150px, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.trip-day-weather-content > img {
+  width: 46px;
+  height: 46px;
+}
+
+.trip-day-weather-summary {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.trip-day-weather-summary > span,
+.trip-day-weather-summary > small,
+.trip-day-weather-unavailable span {
+  color: var(--detail-muted);
+  font-size: 0.64rem;
+}
+
+.trip-day-weather-summary > strong,
+.trip-day-weather-unavailable strong {
+  font-size: 0.8rem;
+}
+
+.trip-day-weather-content dl {
+  display: flex;
+  margin: 0;
+  gap: 1rem;
+}
+
+.trip-day-weather-content dl > div {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.trip-day-weather-content dt {
+  color: var(--detail-muted);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+
+.trip-day-weather-content dd {
+  margin: 0;
+  color: var(--detail-green-dark);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.trip-day-weather-unavailable {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.trip-detail-day-body.has-map {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(420px, 1.18fr);
+}
+
+.trip-detail-day-plans {
+  min-width: 0;
+}
+
+.trip-detail-day-body.has-map .trip-detail-day-plans {
+  border-right: 1px solid rgba(38, 59, 61, 0.09);
+}
+
+.trip-detail-day-plans > ul {
   margin: 0;
   padding: 0.45rem 1.2rem;
   list-style: none;
 }
 
-.trip-detail-day li {
+.trip-detail-day-plans > ul > li {
   display: grid;
   min-height: 52px;
   padding: 0.72rem 0;
@@ -425,30 +567,917 @@
   gap: 0.7rem;
 }
 
-.trip-detail-day li + li {
+.trip-detail-day-plans > ul > li + li {
   border-top: 1px solid rgba(38, 59, 61, 0.075);
 }
 
-.trip-detail-day li time {
+.trip-detail-day-plans > ul > li time {
   color: var(--detail-green-dark);
   font-size: 0.75rem;
   font-weight: 800;
   white-space: nowrap;
 }
 
-.trip-detail-day li > span {
+.trip-detail-day-plans > ul > li > span {
   width: 7px;
   height: 7px;
   background: var(--detail-coral);
   border-radius: 50%;
 }
 
-.trip-detail-day li p {
+.trip-detail-day-plans > ul > li > .trip-detail-activity-content > p {
   min-width: 0;
   margin: 0;
   color: var(--detail-ink);
   font-size: 0.88rem;
   overflow-wrap: break-word;
+}
+
+.trip-detail-activity-content {
+  display: grid;
+  min-width: 0;
+  gap: 0.38rem;
+}
+
+.trip-detail-activity-place {
+  display: grid;
+  min-width: 0;
+  padding: 0.42rem 0.5rem;
+  background: #f7faf6;
+  border: 1px solid rgba(22, 123, 53, 0.1);
+  border-radius: 9px;
+  grid-template-columns: 19px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.trip-detail-activity-place:has(.trip-detail-activity-place-photo) {
+  grid-template-columns: 58px 19px minmax(0, 1fr) auto;
+}
+
+.trip-detail-activity-place-photo {
+  position: relative;
+  display: block;
+  width: 58px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #edf1ec;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.trip-detail-activity-place-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trip-detail-activity-place > span {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  color: #fff;
+  background: var(--detail-coral);
+  border-radius: 50%;
+  place-items: center;
+  font-size: 0.6rem;
+  font-weight: 850;
+}
+
+.trip-detail-activity-place > div:not(.trip-day-map-place-actions) {
+  display: grid;
+  min-width: 0;
+  gap: 0.08rem;
+}
+
+.trip-detail-activity-place strong,
+.trip-detail-activity-place small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-detail-activity-place strong {
+  color: var(--detail-ink);
+  font-size: 0.66rem;
+}
+
+.trip-detail-activity-place small {
+  color: var(--detail-muted);
+  font-size: 0.59rem;
+}
+
+.trip-day-map-panel {
+  min-width: 0;
+  padding: 0.8rem;
+  background: #fbfaf7;
+}
+
+.trip-day-map-toolbar {
+  display: flex;
+  min-height: 40px;
+  margin-bottom: 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trip-day-map-toolbar > div {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.trip-day-map-toolbar .trip-day-map-summary-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trip-day-map-toolbar .trip-day-map-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.trip-day-map-toolbar strong {
+  color: var(--detail-ink);
+  font-size: 0.76rem;
+}
+
+.trip-day-map-toolbar span {
+  color: var(--detail-muted);
+  font-size: 0.64rem;
+}
+
+.trip-day-map-toolbar a,
+.trip-day-map-add-pin-trigger {
+  display: inline-flex;
+  min-height: 36px;
+  padding: 0.48rem 0.7rem;
+  color: #fff;
+  background: var(--detail-green);
+  border-radius: 9px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.36rem;
+  flex: 0 0 auto;
+  font-size: 0.69rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.trip-day-map-add-pin-trigger {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  color: var(--detail-green-dark);
+  background: #fff;
+  border: 1px solid rgba(22, 123, 53, 0.24);
+  border-radius: 50%;
+  font: inherit;
+  cursor: pointer;
+}
+
+.trip-day-map-add-pin-trigger::after {
+  position: absolute;
+  z-index: 20;
+  right: 50%;
+  bottom: calc(100% + 8px);
+  padding: 0.35rem 0.5rem;
+  color: #fff;
+  background: var(--detail-ink);
+  border-radius: 6px;
+  content: attr(data-tooltip);
+  font-size: 0.62rem;
+  font-weight: 750;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(50%, 3px);
+  transition: opacity 130ms ease, transform 130ms ease;
+  white-space: nowrap;
+}
+
+.trip-day-map-add-pin-trigger:hover,
+.trip-day-map-add-pin-trigger[aria-expanded='true'] {
+  color: #fff;
+  background: var(--detail-green);
+  border-color: var(--detail-green);
+}
+
+.trip-day-map-add-pin-trigger:hover::after,
+.trip-day-map-add-pin-trigger:focus-visible::after {
+  opacity: 1;
+  transform: translate(50%, 0);
+}
+
+.trip-day-map-toolbar a:hover {
+  color: #fff;
+  background: var(--detail-green-dark);
+  transform: translateY(-1px);
+}
+
+.trip-day-map-toolbar a svg,
+.trip-day-map-add-pin-trigger svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.trip-day-map-add-pin {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: #f2f7f1;
+  border: 1px solid rgba(22, 123, 53, 0.14);
+  border-radius: 12px;
+}
+
+.trip-day-map-add-pin-heading {
+  display: flex;
+  margin-bottom: 0.6rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trip-day-map-add-pin-heading > div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.trip-day-map-add-pin-heading strong {
+  color: var(--detail-ink);
+  font-size: 0.78rem;
+}
+
+.trip-day-map-add-pin-heading span,
+.trip-day-map-add-pin > small {
+  color: var(--detail-muted);
+  font-size: 0.63rem;
+  line-height: 1.4;
+}
+
+.trip-day-map-add-pin-heading > button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--detail-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trip-day-map-add-pin-fields {
+  display: grid;
+  margin-bottom: 0.45rem;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(170px, 1.2fr) auto;
+  align-items: end;
+  gap: 0.45rem;
+}
+
+.trip-day-map-add-pin-fields label {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.trip-day-map-add-pin-fields label > span {
+  color: var(--detail-muted);
+  font-size: 0.61rem;
+  font-weight: 750;
+}
+
+.trip-day-map-add-pin-fields select,
+.trip-day-map-add-pin-fields input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0.48rem 0.6rem;
+  color: var(--detail-ink);
+  background: #fff;
+  border: 1px solid #c6d2cc;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.trip-day-map-autocomplete {
+  position: relative;
+  min-width: 0;
+}
+
+.trip-day-map-suggestions-wrap {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  min-width: min(310px, calc(100vw - 3rem));
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #d8e1dc;
+  border-radius: 11px;
+  box-shadow: 0 12px 30px rgba(27, 49, 42, 0.16);
+}
+
+.trip-day-map-suggestions {
+  margin: 0;
+  padding: 0.28rem;
+  list-style: none;
+}
+
+.trip-day-map-suggestions li {
+  margin: 0;
+  padding: 0;
+}
+
+.trip-day-map-suggestions button {
+  display: flex;
+  width: 100%;
+  padding: 0.55rem 0.58rem;
+  color: var(--detail-ink);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  align-items: flex-start;
+  gap: 0.48rem;
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trip-day-map-suggestions button:hover,
+.trip-day-map-suggestions li[aria-selected='true'] button {
+  color: var(--detail-green-dark);
+  background: #edf5ed;
+}
+
+.trip-day-map-suggestions svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--detail-coral);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  flex: 0 0 auto;
+}
+
+.trip-day-map-suggestions-status {
+  display: block;
+  padding: 0.68rem 0.75rem;
+  color: var(--detail-muted);
+  font-size: 0.67rem;
+}
+
+.trip-day-map-add-pin-fields select:focus,
+.trip-day-map-add-pin-fields input:focus {
+  border-color: var(--detail-green);
+  box-shadow: 0 0 0 3px rgba(22, 123, 53, 0.1);
+  outline: none;
+}
+
+.trip-day-map-add-pin-fields > button {
+  min-height: 38px;
+  padding: 0.48rem 0.72rem;
+  color: #fff;
+  background: var(--detail-coral);
+  border: 1px solid var(--detail-coral);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.69rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.trip-day-map-add-pin-fields > button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.trip-day-map-add-pin > p,
+.trip-day-map-action-error,
+.trip-day-map-unmatched-note,
+.trip-day-map-fallback-note {
+  margin: 0.55rem 0 0;
+  color: var(--detail-muted);
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.trip-day-map-add-pin > p {
+  color: #7f332a;
+}
+
+.trip-day-map-action-error {
+  margin-bottom: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  color: #7f332a;
+  background: #fff3ef;
+  border-radius: 8px;
+}
+
+.trip-day-map-fallback-note {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.65rem;
+  background: #fff8e9;
+  border-radius: 8px;
+}
+
+.trip-day-map-unmatched-note {
+  padding: 0.5rem 0.65rem;
+  background: #fff8e9;
+  border-radius: 8px;
+}
+
+.trip-day-map-canvas {
+  width: 100%;
+  height: 300px;
+  overflow: hidden;
+  border-radius: 13px;
+}
+
+.trip-day-map-info {
+  position: relative;
+  display: grid;
+  width: 240px;
+  max-width: calc(100vw - 100px);
+  color: var(--detail-ink);
+  gap: 0.25rem;
+  font-family: inherit;
+}
+
+.trip-day-map-info-close {
+  position: absolute;
+  z-index: 2;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  width: 23px;
+  height: 23px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  color: #263b3d;
+  background: rgba(255, 255, 255, 0.92);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 1px 5px rgba(24, 39, 35, 0.22);
+  place-items: center;
+  cursor: pointer;
+}
+
+.trip-day-map-info-close:hover {
+  color: var(--detail-green-dark);
+  background: #fff;
+}
+
+.trip-day-map-info-close svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.trip-day-map-info > figure {
+  position: relative;
+  width: 100%;
+  height: 132px;
+  margin: 0 0 0.2rem;
+  overflow: hidden;
+  background: #edf1ec;
+  border-radius: 8px;
+}
+
+.trip-day-map-info > figure img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trip-day-map-info-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.trip-day-map-info > figure figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 0.2rem 0.3rem;
+  overflow: hidden;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.38);
+  font-size: 0.42rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-day-map-info > figure figcaption a,
+.trip-day-map-info > figure figcaption span {
+  color: inherit;
+  font-size: inherit;
+}
+
+.trip-place-details-panel {
+  position: relative;
+  height: 420px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(38, 59, 61, 0.1);
+  border-radius: 13px;
+}
+
+.trip-place-details-back {
+  position: absolute;
+  z-index: 4;
+  top: 0.65rem;
+  left: 0.65rem;
+  display: inline-flex;
+  min-height: 32px;
+  padding: 0.38rem 0.58rem;
+  color: var(--detail-green-dark);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(22, 123, 53, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 3px 12px rgba(24, 39, 35, 0.14);
+  align-items: center;
+  gap: 0.25rem;
+  font: inherit;
+  font-size: 0.63rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.trip-place-details-back svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.trip-place-details-status {
+  display: flex;
+  height: 100%;
+  padding: 1.5rem;
+  color: var(--detail-muted);
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  font-size: 0.72rem;
+}
+
+.trip-place-details-scroll {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-color: rgba(22, 123, 53, 0.28) transparent;
+}
+
+.trip-place-details-hero {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  background: #edf1ec;
+}
+
+.trip-place-details-hero > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trip-place-details-hero > small {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 0.25rem 0.45rem;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 0.48rem;
+}
+
+.trip-place-details-hero > small a,
+.trip-place-details-hero > small span {
+  color: inherit;
+  font-size: inherit;
+}
+
+.trip-place-details-heading {
+  display: flex;
+  padding: 0.85rem 0.9rem 0.55rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.trip-place-details-heading h3,
+.trip-place-details-heading p,
+.trip-place-details-columns h4,
+.trip-place-details-columns p {
+  margin: 0;
+}
+
+.trip-place-details-heading h3 {
+  color: var(--detail-ink);
+  font-family: 'Garet', Arial, sans-serif;
+  font-size: 1rem;
+}
+
+.trip-place-details-heading p {
+  margin-top: 0.16rem;
+  color: var(--detail-muted);
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+.trip-place-details-rating {
+  display: flex;
+  color: var(--detail-ink);
+  align-items: center;
+  gap: 0.18rem;
+  white-space: nowrap;
+}
+
+.trip-place-details-rating > span {
+  color: #d98a20;
+}
+
+.trip-place-details-rating strong {
+  font-size: 0.75rem;
+}
+
+.trip-place-details-rating small {
+  color: var(--detail-muted);
+  font-size: 0.54rem;
+}
+
+.trip-place-details-links {
+  display: flex;
+  padding: 0 0.9rem 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.trip-place-details-links a {
+  padding: 0.3rem 0.48rem;
+  color: var(--detail-green-dark);
+  background: #edf5ed;
+  border-radius: 999px;
+  font-size: 0.57rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.trip-place-details-columns {
+  display: grid;
+  padding: 0 0.9rem 1rem;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(190px, 1.2fr);
+  gap: 0.75rem;
+}
+
+.trip-place-details-columns > section {
+  min-width: 0;
+  padding: 0.65rem;
+  background: #f8faf7;
+  border-radius: 10px;
+}
+
+.trip-place-details-columns h4 {
+  margin-bottom: 0.45rem;
+  color: var(--detail-ink);
+  font-size: 0.68rem;
+}
+
+.trip-place-details-columns ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 0.2rem;
+}
+
+.trip-place-details-columns li,
+.trip-place-details-columns > section > p {
+  color: var(--detail-muted);
+  font-size: 0.56rem;
+  line-height: 1.4;
+}
+
+.trip-place-details-columns article {
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(38, 59, 61, 0.08);
+}
+
+.trip-place-details-columns article:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.trip-place-details-columns article header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trip-place-details-columns article header > img {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+}
+
+.trip-place-details-columns article header > div {
+  display: grid;
+  gap: 0.05rem;
+}
+
+.trip-place-details-columns article header a,
+.trip-place-details-columns article header strong {
+  color: var(--detail-ink);
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.trip-place-details-columns article header span {
+  color: #b97819;
+  font-size: 0.5rem;
+}
+
+.trip-place-details-columns article > p {
+  display: -webkit-box;
+  margin-top: 0.3rem;
+  overflow: hidden;
+  color: var(--detail-muted);
+  font-size: 0.55rem;
+  line-height: 1.42;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.trip-place-details-provider-attribution {
+  display: block;
+  padding: 0 0.9rem 0.8rem;
+  color: var(--detail-muted);
+  font-size: 0.48rem;
+}
+
+.trip-place-details-provider-attribution a {
+  color: inherit;
+}
+
+.trip-day-map-info strong {
+  font-size: 0.78rem;
+}
+
+.trip-day-map-info span {
+  color: var(--detail-muted);
+  font-size: 0.67rem;
+  line-height: 1.35;
+}
+
+.trip-day-map-info > a {
+  margin-top: 0.12rem;
+  color: var(--detail-green);
+  font-size: 0.66rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.trip-day-map-place-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.trip-day-map-place-actions button {
+  position: relative;
+  display: inline-flex;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  color: var(--detail-green-dark);
+  background: #f2f7f1;
+  border: 0;
+  border-radius: 6px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.22rem;
+  font: inherit;
+  font-size: 0.56rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.trip-day-map-place-actions button::after {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 50%;
+  padding: 0.3rem 0.42rem;
+  color: #fff;
+  background: var(--detail-ink);
+  border-radius: 5px;
+  content: attr(data-tooltip);
+  font-size: 0.55rem;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(50%, -2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: nowrap;
+}
+
+.trip-day-map-place-actions button:hover::after,
+.trip-day-map-place-actions button:focus-visible::after {
+  opacity: 1;
+  transform: translate(50%, 0);
+}
+
+.trip-day-map-place-actions button:hover {
+  background: #e4f0e3;
+}
+
+.trip-day-map-place-actions button.is-delete {
+  color: #943d32;
+  background: #fff1ed;
+}
+
+.trip-day-map-place-actions button.is-delete:hover {
+  background: #ffe4dd;
+}
+
+.trip-day-map-place-actions svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.trip-day-map-status {
+  display: flex;
+  min-height: 300px;
+  margin: 0;
+  padding: 1.5rem;
+  color: var(--detail-muted);
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.trip-day-map-error {
+  color: #7f332a;
+  background: #fff3ef;
+  border: 1px solid rgba(166, 63, 50, 0.2);
+  border-radius: 12px;
+}
+
+.trip-day-map-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(22, 123, 53, 0.18);
+  border-top-color: var(--detail-green);
+  border-radius: 50%;
+  animation: trip-detail-spin 700ms linear infinite;
 }
 
 .trip-detail-open-day {
@@ -609,6 +1638,11 @@
 
 .trip-detail-primary-action:focus-visible,
 .trip-detail-secondary-action:focus-visible,
+.trip-detail-day-map-toggle:focus-visible,
+.trip-day-map-toolbar a:focus-visible,
+.trip-day-map-add-pin-trigger:focus-visible,
+.trip-day-map-place-actions button:focus-visible,
+.trip-day-map-suggestions button:focus-visible,
 .trip-detail-back:focus-visible,
 .trip-detail-empty-itinerary button:focus-visible,
 .trip-detail-not-found button:focus-visible {
@@ -632,6 +1666,15 @@
 
   .trip-detail-hero-content {
     padding: 1.65rem;
+  }
+
+  .trip-detail-day-body.has-map {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-detail-day-body.has-map .trip-detail-day-plans {
+    border-right: 0;
+    border-bottom: 1px solid rgba(38, 59, 61, 0.09);
   }
 }
 
@@ -696,21 +1739,100 @@
     display: none;
   }
 
-  .trip-detail-day ul {
+  .trip-day-weather-content {
+    grid-template-columns: 42px 1fr;
+  }
+
+  .trip-day-weather-content dl {
+    grid-column: 1 / -1;
+  }
+
+  .trip-detail-day-heading-actions {
+    grid-column: 1 / -1;
+  }
+
+  .trip-detail-day-map-toggle {
+    width: 100%;
+  }
+
+  .trip-detail-day-plans > ul {
     padding: 0.35rem 0.65rem;
   }
 
-  .trip-detail-day li {
+  .trip-detail-day-plans > ul > li {
     grid-template-columns: 58px 6px minmax(0, 1fr);
     gap: 0.38rem;
   }
 
-  .trip-detail-day li time {
+  .trip-detail-day-plans > ul > li time {
     font-size: 0.66rem;
   }
 
-  .trip-detail-day li p {
+  .trip-detail-day-plans > ul > li > .trip-detail-activity-content > p {
     font-size: 0.82rem;
+  }
+
+  .trip-day-map-panel {
+    padding: 0.65rem;
+  }
+
+  .trip-day-map-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .trip-day-map-toolbar a {
+    width: 100%;
+  }
+
+  .trip-day-map-toolbar .trip-day-map-toolbar-actions {
+    display: flex;
+  }
+
+  .trip-day-map-toolbar a {
+    flex: 1;
+  }
+
+  .trip-day-map-add-pin-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-day-map-canvas,
+  .trip-day-map-status {
+    height: 260px;
+    min-height: 260px;
+  }
+
+  .trip-detail-activity-place {
+    grid-template-columns: 19px minmax(0, 1fr);
+  }
+
+  .trip-detail-activity-place:has(.trip-detail-activity-place-photo) {
+    grid-template-columns: 52px 19px minmax(0, 1fr);
+  }
+
+  .trip-detail-activity-place-photo {
+    width: 52px;
+    height: 46px;
+    grid-row: 1 / span 2;
+  }
+
+  .trip-detail-activity-place .trip-day-map-place-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .trip-detail-activity-place:has(.trip-detail-activity-place-photo) .trip-day-map-place-actions {
+    grid-column: 3;
+  }
+
+  .trip-place-details-panel {
+    height: 440px;
+  }
+
+  .trip-place-details-columns {
+    grid-template-columns: 1fr;
   }
 
   .trip-detail-edit-section {
@@ -727,6 +1849,8 @@
 
   .trip-detail-primary-action,
   .trip-detail-secondary-action,
+  .trip-detail-day-map-toggle,
+  .trip-day-map-toolbar a,
   .trip-detail-back {
     transition: none;
   }

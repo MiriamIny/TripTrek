@@ -702,9 +702,17 @@
   background: #f5f8f4;
   border: 1px solid rgba(22, 123, 53, 0.14);
   border-radius: 12px;
-  grid-template-columns: 160px minmax(0, 1fr) auto;
+  grid-template-columns: 145px minmax(170px, 1fr) minmax(170px, 1fr) auto;
   align-items: end;
   gap: 0.65rem;
+}
+
+.trip-form-location-field small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--form-muted);
+  font-size: 0.64rem;
+  line-height: 1.35;
 }
 
 .trip-form-editor-actions {
@@ -774,10 +782,81 @@
 
 .trip-form-add-activity {
   display: grid;
-  grid-template-columns: 138px minmax(0, 1fr) auto;
+  grid-template-columns: 138px minmax(170px, 1fr) minmax(180px, 1fr) auto;
   padding: 0.85rem 1.1rem 1.1rem;
   align-items: end;
   gap: 0.65rem;
+}
+
+.place-address-autocomplete {
+  position: relative;
+  min-width: 0;
+}
+
+.place-address-suggestions-wrap {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  min-width: min(330px, calc(100vw - 3rem));
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #d4dfd9;
+  border-radius: 11px;
+  box-shadow: 0 14px 32px rgba(26, 48, 41, 0.17);
+}
+
+.place-address-suggestions {
+  margin: 0;
+  padding: 0.28rem;
+  list-style: none;
+}
+
+.place-address-suggestions li {
+  margin: 0;
+  padding: 0;
+}
+
+.place-address-suggestions button {
+  display: flex;
+  width: 100%;
+  padding: 0.56rem 0.6rem;
+  color: var(--form-ink);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font: inherit;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.place-address-suggestions button:hover,
+.place-address-suggestions li[aria-selected='true'] button {
+  color: var(--form-green-dark);
+  background: #edf5ed;
+}
+
+.place-address-suggestions svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--form-coral);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  flex: 0 0 auto;
+}
+
+.place-address-suggestions-status {
+  display: block;
+  padding: 0.68rem 0.75rem;
+  color: var(--form-muted);
+  font-size: 0.68rem;
 }
 
 .trip-form-flexible-hint {
@@ -1062,32 +1141,39 @@
 }
 
 .trip-form-activity-field input {
+  box-sizing: border-box;
+  height: 44px;
   min-height: 44px;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
   border-radius: 9px;
   font-size: 0.85rem;
 }
 
 .trip-form-add-button {
   display: inline-flex;
+  height: 44px;
   min-height: 44px;
-  padding: 0.7rem 0.85rem;
+  padding: 0.35rem 0.65rem;
   color: var(--form-green-dark);
   background: #eaf4eb;
   border: 1px solid rgba(22, 123, 53, 0.13);
   border-radius: 9px;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 750;
+  line-height: 1.05;
   cursor: pointer;
   transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
 
 .trip-form-add-button svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -1537,6 +1623,10 @@
   }
 
   .trip-form-editor-actions {
+    grid-column: 1 / -1;
+  }
+
+  .trip-form-location-field {
     grid-column: 1 / -1;
   }
 

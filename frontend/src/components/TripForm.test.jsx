@@ -93,6 +93,26 @@ describe('TripForm', () => {
     expect(screen.getByText('Museum Visit')).toBeInTheDocument();
   });
 
+  it('saves an optional map location with a newly added activity', async () => {
+    const onSave = vi.fn();
+    render(<TripForm trip={mockTrip} onSave={onSave} onCancel={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Activity description for day 1'), {
+      target: { value: 'Coffee break' },
+    });
+    fireEvent.change(screen.getByLabelText('Map location for activity on day 1'), {
+      target: { value: 'Café de Flore, Paris' },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add Activity' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Save trip' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0].itinerary[0].activities).toContainEqual(expect.objectContaining({
+      name: 'Coffee break',
+      location: 'Café de Flore, Paris',
+    }));
+  });
+
   it('renders with empty trip object', () => {
     render(<TripForm trip={{}} onSave={vi.fn()} onCancel={vi.fn()} />);
    

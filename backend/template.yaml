@@ -225,6 +225,32 @@ Resources:
             Path: /chat
             Method: POST
             ApiId: !Ref TripTrekAPI
+
+  tripWeather:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: tripWeather
+      Handler: index.handler
+      Runtime: nodejs22.x
+      CodeUri: weather/
+      Timeout: 15
+      MemorySize: 256
+      Environment:
+        Variables:
+          GOOGLE_MAPS_SERVER_SECRET_ID: TrekATrip/google-maps-server
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:TrekATrip/google-maps-server-*
+      Events:
+        Weather:
+          Type: HttpApi
+          Properties:
+            Path: /weather
+            Method: GET
+            ApiId: !Ref TripTrekAPI
   
   imageUploader:
     Type: AWS::Serverless::Function

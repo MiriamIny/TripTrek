@@ -71,28 +71,34 @@ This project uses React with Vite for a fast and modern frontend development exp
    const API_Endpoint =  'https://your-api-endpoint.amazonaws.com/'
    ```
 
-### Using the AI Travel Assistant (OpenAI API Key)
+### Google Maps setup
 
-To enable the built-in AI features:
+The itinerary uses the Google Maps JavaScript API and its client-side geocoder.
 
-1. [Create an OpenAI API key](https://platform.openai.com/account/api-keys).
-2. In the `frontend` folder, create a `.env` file:
+1. In Google Cloud, use a project with billing enabled and enable:
+   - Maps JavaScript API
+   - Geocoding API
+   - Places API (New)
+   - Weather API
+2. Create a browser API key and restrict it to websites (HTTP referrers):
+   - `http://localhost:5173/*`
+   - `https://trekatrip.com/*`
+   - `https://www.trekatrip.com/*`
+   - The Amplify domain, if it is used directly
+3. Restrict the browser key to Maps JavaScript API, Geocoding API, and Places API (New).
+4. For local development, create `frontend/.env.local`:
    ```env
-   VITE_OPENAI_API_KEY=your-api-key-here
-3. Upload the fine-tuning files via CLI:
+   VITE_GOOGLE_MAPS_API_KEY=your_browser_key
    ```
-   openai api files upload --file training.jsonl --purpose fine-tune
-   openai api files upload --file validation.jsonl --purpose fine-tune
-4. Create the fine-tuned model:
-   ```
-   openai api fine_tunes.create \
-      -t file-xxxxxxxxxxxxxxxxxxx \
-      -v file-yyyyyyyyyyyyyyyyyyy \
-      -m gpt-3.5-turbo
-5. Replace the fine-tuned model ID in the Chatbox component line 8
-   ```
-   const FINETUNED_MODEL_ID = "ft:your-finetuned-model-id-here";
-   ```
+5. For production, add `VITE_GOOGLE_MAPS_API_KEY` in the Amplify app's environment variables and redeploy the frontend.
+
+6. Create a second server API key for Weather API only. Do not put it in Amplify or a `VITE_` variable. Store it in AWS Secrets Manager in `us-east-1` as `TrekATrip/google-maps-server`, then deploy the SAM backend. The weather Lambda is the only component permitted to read it.
+
+Browser map keys are included in the built JavaScript and are inspectable. Never use an unrestricted key; the website and API restrictions are what protect it.
+
+### AI Travel Assistant setup
+
+Trekka calls OpenAI through the authenticated backend Lambda. Store the OpenAI key in AWS Secrets Manager as `TrekATrip/openai`; never add an OpenAI key to a `VITE_` variable or frontend file.
 
 ## 📌 **Why TripTrek?**
 ### Because life is better when it's organized. Whether you're a meticulous planner or a spontaneous adventurer, **TripTrek** gives you the flexibility to build and adjust your itinerary on the fly.
