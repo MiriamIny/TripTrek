@@ -418,21 +418,48 @@
 }
 
 .trip-detail-day-map-toggle {
+  position: relative;
   display: inline-flex;
+  width: 34px;
+  height: 34px;
   min-height: 34px;
-  padding: 0.42rem 0.65rem;
+  padding: 0;
   color: var(--detail-green-dark);
   background: #fff;
   border: 1px solid rgba(22, 123, 53, 0.18);
   border-radius: 9px;
   align-items: center;
   justify-content: center;
-  gap: 0.38rem;
   font: inherit;
   font-size: 0.69rem;
   font-weight: 800;
   cursor: pointer;
   transition: color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.trip-detail-day-map-toggle::after {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 7px);
+  left: 50%;
+  padding: 0.28rem 0.45rem;
+  color: #fff;
+  background: #263b3d;
+  border-radius: 5px;
+  content: attr(data-tooltip);
+  font-size: 0.56rem;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -3px);
+  transition: opacity 130ms ease, transform 130ms ease;
+  white-space: nowrap;
+}
+
+.trip-detail-day-map-toggle:hover::after,
+.trip-detail-day-map-toggle:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .trip-detail-day-map-toggle:hover {
@@ -451,95 +478,7 @@
   stroke-width: 1.7;
 }
 
-.trip-day-weather-card {
-  position: relative;
-  padding: 0.8rem 2.6rem 0.8rem 1rem;
-  color: var(--detail-ink);
-  background: linear-gradient(110deg, #eff8f6, #f8fbf3);
-  border-bottom: 1px solid rgba(38, 59, 61, 0.08);
-}
-
-.trip-day-weather-card > p {
-  margin: 0;
-  color: var(--detail-muted);
-  font-size: 0.72rem;
-}
-
-.trip-day-weather-close {
-  position: absolute;
-  top: 0.55rem;
-  right: 0.65rem;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  color: var(--detail-muted);
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  font: inherit;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-.trip-day-weather-content {
-  display: grid;
-  grid-template-columns: 48px minmax(150px, 1fr) auto;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.trip-day-weather-content > img {
-  width: 46px;
-  height: 46px;
-}
-
-.trip-day-weather-summary {
-  display: grid;
-  gap: 0.08rem;
-}
-
-.trip-day-weather-summary > span,
-.trip-day-weather-summary > small,
-.trip-day-weather-unavailable span {
-  color: var(--detail-muted);
-  font-size: 0.64rem;
-}
-
-.trip-day-weather-summary > strong,
-.trip-day-weather-unavailable strong {
-  font-size: 0.8rem;
-}
-
-.trip-day-weather-content dl {
-  display: flex;
-  margin: 0;
-  gap: 1rem;
-}
-
-.trip-day-weather-content dl > div {
-  display: grid;
-  gap: 0.08rem;
-}
-
-.trip-day-weather-content dt {
-  color: var(--detail-muted);
-  font-size: 0.58rem;
-  text-transform: uppercase;
-}
-
-.trip-day-weather-content dd {
-  margin: 0;
-  color: var(--detail-green-dark);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.trip-day-weather-unavailable {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.trip-detail-day-body.has-map {
+.trip-detail-day-body.has-viewer {
   display: grid;
   grid-template-columns: minmax(260px, 0.82fr) minmax(420px, 1.18fr);
 }
@@ -548,8 +487,281 @@
   min-width: 0;
 }
 
-.trip-detail-day-body.has-map .trip-detail-day-plans {
+.trip-detail-day-body.has-viewer .trip-detail-day-plans {
   border-right: 1px solid rgba(38, 59, 61, 0.09);
+}
+
+.trip-day-weather-panel {
+  min-width: 0;
+  padding: 0.8rem;
+  background: #fbfaf7;
+}
+
+.trip-day-weather-card {
+  min-height: 390px;
+  overflow: hidden;
+  color: var(--detail-ink);
+  background: linear-gradient(145deg, #edf7f4, #f8f8ef 68%, #fceee8);
+  border: 1px solid rgba(38, 59, 61, 0.09);
+  border-radius: 13px;
+}
+
+.trip-day-viewer-heading {
+  display: flex;
+  min-height: 58px;
+  padding: 0.8rem 0.85rem 0.7rem 1rem;
+  border-bottom: 1px solid rgba(38, 59, 61, 0.08);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trip-day-viewer-heading > div {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.trip-day-viewer-heading span {
+  color: var(--detail-green);
+  font-size: 0.57rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.trip-day-viewer-heading strong {
+  font-size: 0.8rem;
+}
+
+.trip-day-viewer-close {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  color: var(--detail-muted);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(38, 59, 61, 0.1);
+  border-radius: 50%;
+  place-items: center;
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trip-day-viewer-close:hover {
+  color: var(--detail-green-dark);
+  border-color: rgba(22, 123, 53, 0.3);
+}
+
+.trip-day-weather-carousel {
+  position: relative;
+}
+
+.trip-day-weather-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.trip-day-weather-track::-webkit-scrollbar {
+  display: none;
+}
+
+.trip-day-weather-slide {
+  min-width: 100%;
+  min-height: 292px;
+  padding: 1rem 1.2rem 0.8rem;
+  scroll-snap-align: start;
+}
+
+.trip-day-weather-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.trip-day-weather-content > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trip-day-weather-content > header > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.trip-day-weather-content > header img {
+  width: 68px;
+  height: 68px;
+}
+
+.trip-day-weather-location {
+  color: var(--detail-muted);
+  font-size: 0.66rem;
+}
+
+.trip-day-weather-content > header strong {
+  font-size: 1.15rem;
+}
+
+.trip-day-weather-content > header small {
+  color: var(--detail-green-dark);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.trip-day-weather-metrics {
+  display: grid;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(38, 59, 61, 0.07);
+  border-radius: 11px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.trip-day-weather-metrics > div {
+  display: grid;
+  gap: 0.1rem;
+  text-align: center;
+}
+
+.trip-day-weather-metrics > div + div {
+  border-left: 1px solid rgba(38, 59, 61, 0.09);
+}
+
+.trip-day-weather-metrics dt {
+  color: var(--detail-muted);
+  font-size: 0.55rem;
+  text-transform: uppercase;
+}
+
+.trip-day-weather-metrics dd {
+  margin: 0;
+  color: var(--detail-green-dark);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.trip-day-weather-periods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.trip-day-weather-periods section {
+  display: grid;
+  min-width: 0;
+  padding: 0.65rem;
+  background: rgba(255, 255, 255, 0.54);
+  border-radius: 11px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.5rem;
+}
+
+.trip-day-weather-periods section > span,
+.trip-day-weather-periods section > strong,
+.trip-day-weather-periods section > small {
+  grid-column: 2;
+}
+
+.trip-day-weather-periods section > span {
+  color: var(--detail-coral);
+  font-size: 0.55rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.trip-day-weather-periods section > img {
+  width: 36px;
+  height: 36px;
+  grid-row: 1 / span 3;
+}
+
+.trip-day-weather-periods section > strong {
+  overflow: hidden;
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-day-weather-periods section > small {
+  color: var(--detail-muted);
+  font-size: 0.53rem;
+}
+
+.trip-day-weather-status,
+.trip-day-weather-unavailable {
+  margin: 0;
+  color: var(--detail-muted);
+  font-size: 0.72rem;
+}
+
+.trip-day-weather-unavailable {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.trip-day-weather-unavailable p {
+  margin: 0;
+}
+
+.trip-day-weather-arrow {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  color: var(--detail-green-dark);
+  background: rgba(255, 255, 255, 0.93);
+  border: 1px solid rgba(22, 123, 53, 0.14);
+  border-radius: 50%;
+  box-shadow: 0 3px 12px rgba(24, 39, 35, 0.12);
+  place-items: center;
+  font: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.trip-day-weather-arrow.is-previous { left: 0.35rem; }
+.trip-day-weather-arrow.is-next { right: 0.35rem; }
+.trip-day-weather-arrow:disabled { opacity: 0; pointer-events: none; }
+
+.trip-day-weather-dots {
+  display: flex;
+  padding: 0 1rem 0.85rem;
+  justify-content: center;
+  gap: 0.32rem;
+}
+
+.trip-day-weather-dots button {
+  width: 6px;
+  height: 6px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  background: rgba(38, 59, 61, 0.2);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: width 150ms ease, background-color 150ms ease;
+}
+
+.trip-day-weather-dots button.is-active {
+  width: 18px;
+  background: var(--detail-green);
 }
 
 .trip-detail-day-plans > ul {
@@ -606,13 +818,21 @@
   background: #f7faf6;
   border: 1px solid rgba(22, 123, 53, 0.1);
   border-radius: 9px;
-  grid-template-columns: 19px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.45rem;
 }
 
 .trip-detail-activity-place:has(.trip-detail-activity-place-photo) {
-  grid-template-columns: 58px 19px minmax(0, 1fr) auto;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+}
+
+.trip-detail-activity-place.has-map-pin {
+  grid-template-columns: 25px minmax(0, 1fr) auto;
+}
+
+.trip-detail-activity-place.has-map-pin:has(.trip-detail-activity-place-photo) {
+  grid-template-columns: 58px 25px minmax(0, 1fr) auto;
 }
 
 .trip-detail-activity-place-photo {
@@ -636,16 +856,31 @@
   object-fit: cover;
 }
 
-.trip-detail-activity-place > span {
+.trip-detail-activity-map-pin {
+  position: relative;
   display: grid;
-  width: 19px;
-  height: 19px;
-  color: #fff;
-  background: var(--detail-coral);
-  border-radius: 50%;
+  width: 25px;
+  height: 29px;
   place-items: center;
-  font-size: 0.6rem;
-  font-weight: 850;
+}
+
+.trip-detail-activity-map-pin svg {
+  position: absolute;
+  inset: 0;
+  width: 25px;
+  height: 29px;
+  fill: var(--detail-coral);
+  stroke: #fff;
+  stroke-width: 0.8;
+}
+
+.trip-detail-activity-map-pin b {
+  position: relative;
+  z-index: 1;
+  margin-top: -4px;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 900;
 }
 
 .trip-detail-activity-place > div:not(.trip-day-map-place-actions) {
@@ -672,9 +907,21 @@
 }
 
 .trip-day-map-panel {
+  position: relative;
   min-width: 0;
   padding: 0.8rem;
   background: #fbfaf7;
+}
+
+.trip-day-map-close {
+  position: absolute;
+  z-index: 12;
+  top: 0.55rem;
+  right: 0.55rem;
+}
+
+.trip-day-map-panel .trip-day-map-toolbar {
+  padding-right: 2rem;
 }
 
 .trip-day-map-toolbar {
@@ -1668,11 +1915,11 @@
     padding: 1.65rem;
   }
 
-  .trip-detail-day-body.has-map {
+  .trip-detail-day-body.has-viewer {
     grid-template-columns: 1fr;
   }
 
-  .trip-detail-day-body.has-map .trip-detail-day-plans {
+  .trip-detail-day-body.has-viewer .trip-detail-day-plans {
     border-right: 0;
     border-bottom: 1px solid rgba(38, 59, 61, 0.09);
   }
@@ -1739,20 +1986,12 @@
     display: none;
   }
 
-  .trip-day-weather-content {
-    grid-template-columns: 42px 1fr;
-  }
-
-  .trip-day-weather-content dl {
-    grid-column: 1 / -1;
-  }
-
   .trip-detail-day-heading-actions {
     grid-column: 1 / -1;
   }
 
   .trip-detail-day-map-toggle {
-    width: 100%;
+    width: 34px;
   }
 
   .trip-detail-day-plans > ul {
@@ -1805,11 +2044,19 @@
   }
 
   .trip-detail-activity-place {
-    grid-template-columns: 19px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .trip-detail-activity-place:has(.trip-detail-activity-place-photo) {
-    grid-template-columns: 52px 19px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .trip-detail-activity-place.has-map-pin {
+    grid-template-columns: 25px minmax(0, 1fr);
+  }
+
+  .trip-detail-activity-place.has-map-pin:has(.trip-detail-activity-place-photo) {
+    grid-template-columns: 52px 25px minmax(0, 1fr);
   }
 
   .trip-detail-activity-place-photo {
@@ -1819,11 +2066,19 @@
   }
 
   .trip-detail-activity-place .trip-day-map-place-actions {
-    grid-column: 2;
+    grid-column: 1;
     justify-content: flex-start;
   }
 
   .trip-detail-activity-place:has(.trip-detail-activity-place-photo) .trip-day-map-place-actions {
+    grid-column: 2;
+  }
+
+  .trip-detail-activity-place.has-map-pin .trip-day-map-place-actions {
+    grid-column: 2;
+  }
+
+  .trip-detail-activity-place.has-map-pin:has(.trip-detail-activity-place-photo) .trip-day-map-place-actions {
     grid-column: 3;
   }
 
