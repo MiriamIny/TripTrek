@@ -330,9 +330,9 @@ html, body {
 
 /* Force the form to be wider with more specific targeting */
 form[data-amplify-form] {
-  width: 450px !important; /* Changed from 600px to 450px (3/4 size) */
-  min-width: 450px !important; /* Changed from 600px to 450px */
-  max-width: none !important;
+  width: min(100%, 450px) !important;
+  min-width: 0 !important;
+  max-width: 450px !important;
 }
 
 /* Target all form types including password reset forms */
@@ -341,9 +341,9 @@ form[data-amplify-form][data-amplify-authenticator-signup],
 form[data-amplify-form][data-amplify-authenticator-confirmresetpassword],
 form[data-amplify-form][data-amplify-authenticator-resetpassword],
 form[data-amplify-form][data-amplify-authenticator-forgotpassword] {
-  width: 450px !important;
-  min-width: 450px !important;
-  max-width: none !important;
+  width: min(100%, 450px) !important;
+  min-width: 0 !important;
+  max-width: 450px !important;
   margin: 0 auto !important;
   display: flex !important;
   flex-direction: column !important;
@@ -358,7 +358,7 @@ form[data-amplify-form][data-amplify-authenticator-confirmresetpassword] .amplif
 form[data-amplify-form][data-amplify-authenticator-resetpassword] .amplify-input,
 form[data-amplify-form][data-amplify-authenticator-forgotpassword] .amplify-input {
   width: 100% !important;
-  min-width: 375px !important;
+  min-width: 0 !important;
 }
 
 /* Center all fields in all forms */

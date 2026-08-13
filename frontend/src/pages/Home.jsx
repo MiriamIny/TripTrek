@@ -69,7 +69,7 @@ const Home = () => {
               See how it works
             </a>
           </div>
-          <ul className="home-hero-points" aria-label="TripTrek highlights">
+          <ul className="home-hero-points" aria-label="Trek A Trip highlights">
             <li><span aria-hidden="true">✓</span> Free to start</li>
             <li><span aria-hidden="true">✓</span> Easy day-by-day planning</li>
             <li><span aria-hidden="true">✓</span> Everything in one place</li>
@@ -123,7 +123,7 @@ const Home = () => {
         <div className="home-section-heading">
           <p>Plan with confidence</p>
           <h2 id="home-features-heading">From “where should we go?” to ready to depart.</h2>
-          <span>TripTrek gives your ideas enough structure to become a trip—without making planning feel like work.</span>
+          <span>Trek A Trip gives your ideas enough structure to become a trip—without making planning feel like work.</span>
         </div>
         <div className="home-feature-grid">
           {features.map((feature) => (

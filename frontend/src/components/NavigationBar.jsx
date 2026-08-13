@@ -9,7 +9,7 @@ import {
   Tooltip,
 } from 'react-bootstrap';
 import { Link, NavLink } from 'react-router-dom';
-import logo from '../assets/TripTrekLogo.png'
+import logo from '../assets/TrekATripLogo.png'
 import { useAuth } from '../context/AuthContext';
 
 const NavigationBar = () => {
@@ -59,7 +59,7 @@ const NavigationBar = () => {
         >
           <img
             src={logo}
-            alt="TripTrek"
+            alt="Trek A Trip"
             className="main-navbar-logo d-inline-block align-top me-2"
           />
         </Navbar.Brand>
@@ -110,7 +110,7 @@ const NavigationBar = () => {
                       ) : firstLetter}
                     </Dropdown.Toggle>
 
-                    <Dropdown.Menu>
+                    <Dropdown.Menu className="account-menu">
                       <Dropdown.Header>
                         <strong className="d-block text-slate-gray">{displayName}</strong>
                         {email && (
@@ -119,6 +119,7 @@ const NavigationBar = () => {
                       </Dropdown.Header>
                       <Dropdown.Divider />
                       <Dropdown.Item
+                        className="account-menu-sign-out"
                         onClick={() => {
                           closeMenu();
                           signOut();

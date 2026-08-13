@@ -224,7 +224,7 @@ const Chatbot = () => {
       >
         <header className="trekka-header">
           <span className="trekka-header-mark" aria-hidden="true">
-            <img src="/triptrek.svg" alt="" />
+            <img src="/trek-a-trip.svg" alt="" />
           </span>
           <div className="trekka-header-copy">
             <div className="trekka-title-row">
@@ -255,7 +255,7 @@ const Chatbot = () => {
                   profilePicture
                     ? <img className="trekka-user-photo" src={profilePicture} alt="" referrerPolicy="no-referrer" />
                     : profileInitial
-                ) : <img src="/triptrek.svg" alt="" />}
+                ) : <img src="/trek-a-trip.svg" alt="" />}
               </span>
               <div className="trekka-message-body">
                 <span className="trekka-message-name">{message.sender === 'user' ? profileName : 'trekka'}</span>
@@ -266,7 +266,7 @@ const Chatbot = () => {
 
           {streamedMessage && (
             <div className="trekka-message trekka-message--bot">
-              <span className="trekka-avatar" aria-hidden="true"><img src="/triptrek.svg" alt="" /></span>
+              <span className="trekka-avatar" aria-hidden="true"><img src="/trek-a-trip.svg" alt="" /></span>
               <div className="trekka-message-body">
                 <span className="trekka-message-name">trekka</span>
                 <p>{streamedMessage}</p>
@@ -276,7 +276,7 @@ const Chatbot = () => {
 
           {isTyping && !streamedMessage && (
             <div className="trekka-message trekka-message--bot" aria-label="trekka is thinking">
-              <span className="trekka-avatar" aria-hidden="true"><img src="/triptrek.svg" alt="" /></span>
+              <span className="trekka-avatar" aria-hidden="true"><img src="/trek-a-trip.svg" alt="" /></span>
               <div className="trekka-typing" aria-hidden="true"><i /><i /><i /></div>
             </div>
           )}

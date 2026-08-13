@@ -28,7 +28,7 @@ vi.mock('../context/AuthContext', () => ({
   }),
 }));
 
-vi.mock('../assets/TripTrekLogo.png', () => ({
+vi.mock('../assets/TrekATripLogo.png', () => ({
   default: 'mocked-logo-path',
 }));
 
@@ -40,10 +40,14 @@ describe('AuthModal', () => {
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
     expect(screen.getByText('or')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with email' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Enter your email' })).toHaveAttribute('placeholder', 'Email');
     expect(screen.getByText(/Don't have an account?/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create one' })).toBeInTheDocument();
     expect(screen.queryByTestId('authenticator')).not.toBeInTheDocument();
 
+    fireEvent.change(screen.getByRole('textbox', { name: 'Enter your email' }), {
+      target: { value: 'miriam@example.com' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }));
     expect(screen.queryByRole('button', { name: 'View password requirements' })).not.toBeInTheDocument();
   });
@@ -69,10 +73,13 @@ describe('AuthModal', () => {
     expect(screen.getByText(/Already have an account?/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
 
+    fireEvent.change(screen.getByRole('textbox', { name: 'Enter your email' }), {
+      target: { value: 'miriam@example.com' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }));
 
     expect(screen.getByTestId('authenticator')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Back to Google or email options' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Back to Google/ })).not.toBeInTheDocument();
     const requirementsButton = await screen.findByRole('button', {
       name: 'View password requirements',
     });
@@ -92,6 +99,11 @@ describe('AuthModal', () => {
         loginMechanisms: ['email'],
         formFields: expect.objectContaining({
           signIn: expect.objectContaining({
+            username: expect.objectContaining({
+              label: 'Email',
+              placeholder: 'Email',
+              defaultValue: 'miriam@example.com',
+            }),
             password: expect.objectContaining({
               passwordIsHiddenLabel: 'Password hidden',
               passwordIsShownLabel: 'Password revealed',
@@ -103,14 +115,14 @@ describe('AuthModal', () => {
       undefined,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Back to Google or email options' }));
-    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
-    expect(screen.queryByTestId('authenticator')).not.toBeInTheDocument();
   });
 
   it('turns a duplicate-email sign-up error into account-linking guidance', async () => {
     render(<AuthModal />);
     fireEvent.click(screen.getByRole('button', { name: 'Create one' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Enter your email' }), {
+      target: { value: 'miriam@example.com' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }));
 
     const services = Authenticator.mock.calls.at(-1)[0].services;

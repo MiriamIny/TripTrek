@@ -1,6 +1,6 @@
-![Trip Trek -- Your Itinerary Planner](frontend/src/assets/TripTrekLogo.png) 
+![Trek A Trip -- Your Itinerary Planner](frontend/src/assets/TrekATripLogo.png)
 
-### Welcome to **TripTrek**, the ultimate tool for organizing your day, trip, or event with ease and clarity. Whether you're planning a vacation, a conference, or just your weekend, **TripTrek** helps you stay on track and in control.
+### Welcome to **Trek A Trip**, the ultimate tool for organizing your day, trip, or event with ease and clarity. Whether you're planning a vacation, a conference, or just your weekend, **Trek A Trip** helps you stay on track and in control.
 
 
 ## **Features**
@@ -134,5 +134,5 @@ After deploying the SAM stack, attach the function in the Cognito console:
 
 Do not attach it with a partial `update-user-pool` CLI call. Cognito resets omitted user-pool settings to their defaults. Existing federated profiles that have already completed Google sign-in are not linked retroactively; migrate their DynamoDB ownership and Cognito profiles separately before deleting anything.
 
-## 📌 **Why TripTrek?**
-### Because life is better when it's organized. Whether you're a meticulous planner or a spontaneous adventurer, **TripTrek** gives you the flexibility to build and adjust your itinerary on the fly.
+## 📌 **Why Trek A Trip?**
+### Because life is better when it's organized. Whether you're a meticulous planner or a spontaneous adventurer, **Trek A Trip** gives you the flexibility to build and adjust your itinerary on the fly.

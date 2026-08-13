@@ -6,10 +6,10 @@ import About from './About';
 describe('About component', () => {
   const renderAbout = () => render(<About />, { wrapper: MemoryRouter });
 
-  it('introduces the purpose of TripTrek', () => {
+  it('introduces the purpose of Trek A Trip', () => {
     renderAbout();
 
-    expect(screen.getByText(/about triptrek/i)).toBeInTheDocument();
+    expect(screen.getByText(/about trek a trip/i)).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
         name: /planning should feel like the beginning of the adventure/i,
@@ -17,11 +17,11 @@ describe('About component', () => {
     ).toBeInTheDocument();
   });
 
-  it('explains why TripTrek exists', () => {
+  it('explains why Trek A Trip exists', () => {
     renderAbout();
 
     expect(screen.getByText(/ever wish your trip was thoughtfully planned/i)).toBeInTheDocument();
-    expect(screen.getByText(/triptrek brings the shape of a journey/i)).toBeInTheDocument();
+    expect(screen.getByText(/trek a trip brings the shape of a journey/i)).toBeInTheDocument();
   });
 
   it('presents the three product principles', () => {
@@ -44,7 +44,7 @@ describe('About component', () => {
     );
   });
 
-  it('keeps the closing TripTrek message', () => {
+  it('keeps the closing Trek A Trip message', () => {
     renderAbout();
 
     expect(screen.getByText(/let’s make trip planning part of the fun/i)).toBeInTheDocument();

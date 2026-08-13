@@ -372,7 +372,7 @@ export default function TripList() {
               <span className="trips-empty-orbit" />
               <span className="trips-empty-route"><RouteMark /></span>
               <span className="trips-empty-stamp">
-                <img src="/triptrek.svg" alt="" />
+                <img src="/trek-a-trip.svg" alt="" />
               </span>
             </div>
             <p className="trips-eyebrow">A blank itinerary, in the best way</p>

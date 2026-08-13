@@ -156,6 +156,59 @@ input:focus, textarea:focus {
   outline-offset: 3px;
 }
 
+.nav-account .account-menu {
+  --bs-dropdown-link-color: #37474f;
+  --bs-dropdown-link-hover-color: #1a5f1a;
+  --bs-dropdown-link-hover-bg: #edf5ed;
+  --bs-dropdown-link-active-color: #1a5f1a;
+  --bs-dropdown-link-active-bg: #e4f0e5;
+  min-width: 220px;
+  margin-top: 0.55rem;
+  padding: 0.45rem;
+  background: #fffdf9;
+  border: 1px solid rgba(55, 71, 79, 0.11);
+  border-radius: 13px;
+  box-shadow: 0 12px 30px rgba(38, 50, 56, 0.16);
+}
+
+.nav-account .account-menu .dropdown-header {
+  padding: 0.55rem 0.65rem 0.45rem;
+}
+
+.nav-account .account-menu .dropdown-header span {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-account .account-menu .dropdown-divider {
+  margin: 0.3rem 0;
+  border-color: rgba(55, 71, 79, 0.1);
+}
+
+.nav-account .account-menu-sign-out {
+  padding: 0.55rem 0.65rem;
+  color: #37474f;
+  background: transparent;
+  border-radius: 8px;
+  font-weight: 650;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.nav-account .account-menu-sign-out:hover,
+.nav-account .account-menu-sign-out:focus,
+.nav-account .account-menu-sign-out:active,
+.nav-account .account-menu-sign-out.active {
+  color: #1a5f1a;
+  background: #edf5ed;
+}
+
+.nav-account .account-menu-sign-out:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(46, 125, 50, 0.3);
+  outline: none;
+}
+
 .account-avatar--guest {
   appearance: none;
   position: relative;

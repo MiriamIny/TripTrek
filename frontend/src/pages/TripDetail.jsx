@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format, parse } from 'date-fns';
 import { useNavigate, useParams } from 'react-router-dom';
 import TripForm from '../components/TripForm';
@@ -75,6 +75,16 @@ export default function TripDetail() {
   const [placeDetailsRequest, setPlaceDetailsRequest] = useState(null);
   const [showShare, setShowShare] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const saveErrorRef = useRef(null);
+
+  useEffect(() => {
+    if (!saveError) return;
+    const frame = window.requestAnimationFrame(() => {
+      saveErrorRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      saveErrorRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [saveError]);
 
   useEffect(() => {
     if (trips.length > 0) setTrip(getTripById(tripId));
@@ -242,10 +252,6 @@ export default function TripDetail() {
                 <dt>Plans</dt>
                 <dd>{activityCount} {activityCount === 1 ? 'activity' : 'activities'}</dd>
               </div>
-              <div>
-                <dt>Days mapped</dt>
-                <dd>{trip.itinerary?.length || 0}</dd>
-              </div>
             </dl>
 
             {!editingTrip && (
@@ -286,7 +292,12 @@ export default function TripDetail() {
         </section>
 
         {saveError && (
-          <div className="trip-detail-save-error" role="alert">
+          <div
+            ref={saveErrorRef}
+            className="trip-detail-save-error"
+            role="alert"
+            tabIndex="-1"
+          >
             <span>{saveError}</span>
             <button type="button" onClick={handleLoadLatest}>Load latest changes</button>
           </div>

@@ -8,6 +8,12 @@ describe('ActivityTimeSelect', () => {
     render(<ActivityTimeSelect value="" onChange={onChange} ariaLabel="Activity time" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Activity time' }));
+    expect(screen.getByRole('listbox', { name: 'Hour' }).querySelector('[aria-selected="true"]'))
+      .toHaveTextContent('12');
+    expect(screen.getByRole('listbox', { name: 'Minute' }).querySelector('[aria-selected="true"]'))
+      .toHaveTextContent('00');
+    expect(screen.getByRole('listbox', { name: 'AM or PM' }).querySelector('[aria-selected="true"]'))
+      .toHaveTextContent('AM');
     fireEvent.click(screen.getByRole('option', { name: '3' }));
     fireEvent.click(screen.getByRole('option', { name: '37' }));
     fireEvent.click(screen.getByRole('option', { name: 'PM' }));
