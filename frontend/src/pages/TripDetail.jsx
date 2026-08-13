@@ -132,6 +132,7 @@ export default function TripDetail() {
   }, []);
 
   const handleViewPlace = (dayIndex, place) => {
+    setOpenWeatherDay(null);
     setOpenMapDay(dayIndex);
     setPlaceDetailsRequest({
       dayIndex,
@@ -141,6 +142,7 @@ export default function TripDetail() {
   };
 
   const handleEditPin = (dayIndex, place) => {
+    setOpenWeatherDay(null);
     setOpenMapDay(dayIndex);
     setEditPinRequest({
       dayIndex,
@@ -323,52 +325,48 @@ export default function TripDetail() {
                         </div>
                         <div className="trip-detail-day-heading-actions">
                           <small>{dayPlan.activities?.length || 0} {dayPlan.activities?.length === 1 ? 'plan' : 'plans'}</small>
-                          {apiKey && dayPlan.activities?.length > 0 && (
-                            <button
-                              type="button"
-                              className="trip-detail-day-map-toggle"
-                              aria-expanded={openMapDay === dayIndex}
-                              aria-controls={`trip-day-map-${dayIndex}`}
-                              onClick={() => setOpenMapDay((currentDay) => (
-                                currentDay === dayIndex ? null : dayIndex
-                              ))}
-                            >
+                           {apiKey && dayPlan.activities?.length > 0 && (
+                             <button
+                               type="button"
+                               className="trip-detail-day-map-toggle"
+                               data-tooltip="Map"
+                               title="Map"
+                               aria-label={openMapDay === dayIndex ? 'Close map' : 'Open map'}
+                               aria-expanded={openMapDay === dayIndex}
+                               aria-controls={`trip-day-map-${dayIndex}`}
+                               onClick={() => {
+                                 setOpenWeatherDay(null);
+                                 setOpenMapDay((currentDay) => (currentDay === dayIndex ? null : dayIndex));
+                               }}
+                             >
                               <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="m4 6 5-2 6 2 5-2v14l-5 2-6-2-5 2V6ZM9 4v14M15 6v14" />
                               </svg>
-                              {openMapDay === dayIndex ? 'Hide map' : 'Show map'}
-                            </button>
-                          )}
-                          {apiKey && (
-                            <button
-                              type="button"
-                              className="trip-detail-day-map-toggle"
-                              aria-expanded={openWeatherDay === dayIndex}
-                              aria-controls={`trip-day-weather-${dayIndex}`}
-                              onClick={() => setOpenWeatherDay((currentDay) => (
-                                currentDay === dayIndex ? null : dayIndex
-                              ))}
-                            >
+                             </button>
+                           )}
+                           {apiKey && (
+                             <button
+                               type="button"
+                               className="trip-detail-day-map-toggle"
+                               data-tooltip="Weather"
+                               title="Weather"
+                               aria-label={openWeatherDay === dayIndex ? 'Close weather' : 'Open weather'}
+                               aria-expanded={openWeatherDay === dayIndex}
+                               aria-controls={`trip-day-weather-${dayIndex}`}
+                               onClick={() => {
+                                 setOpenMapDay(null);
+                                 setOpenWeatherDay((currentDay) => (currentDay === dayIndex ? null : dayIndex));
+                               }}
+                             >
                               <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M8 17h9a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 7.5 4.8 4.8 0 0 0 8 17Z" />
                               </svg>
-                              {openWeatherDay === dayIndex ? 'Hide weather' : 'Show weather'}
-                            </button>
-                          )}
+                             </button>
+                           )}
                         </div>
                       </header>
 
-                      {apiKey && openWeatherDay === dayIndex && (
-                        <div id={`trip-day-weather-${dayIndex}`}>
-                          <DayWeather
-                            dayPlan={dayPlan}
-                            destination={trip.destination}
-                            onClose={() => setOpenWeatherDay(null)}
-                          />
-                        </div>
-                      )}
-
-                      <div className={`trip-detail-day-body${openMapDay === dayIndex ? ' has-map' : ''}`}>
+                      <div className={`trip-detail-day-body${openMapDay === dayIndex || openWeatherDay === dayIndex ? ' has-viewer' : ''}`}>
                         <div className="trip-detail-day-plans">
                           {Array.isArray(dayPlan.activities) && dayPlan.activities.length > 0 ? (
                             <ul>
@@ -386,7 +384,7 @@ export default function TripDetail() {
                                     <div className="trip-detail-activity-content">
                                       <p>{activity.name}</p>
                                       {place && (
-                                        <div className="trip-detail-activity-place">
+                                        <div className={`trip-detail-activity-place${openMapDay === dayIndex ? ' has-map-pin' : ''}`}>
                                           {place.photoUrl && (
                                             <button
                                               type="button"
@@ -397,7 +395,14 @@ export default function TripDetail() {
                                               <img src={place.photoUrl} alt="" loading="lazy" />
                                             </button>
                                           )}
-                                          <span aria-hidden="true">{placeIndex + 1}</span>
+                                          {openMapDay === dayIndex && (
+                                            <span className="trip-detail-activity-map-pin" aria-hidden="true">
+                                              <svg viewBox="0 0 24 28">
+                                                <path d="M12 27S2 18.4 2 10.7A10 10 0 0 1 22 10.7C22 18.4 12 27 12 27Z" />
+                                              </svg>
+                                              <b>{placeIndex + 1}</b>
+                                            </span>
+                                          )}
                                           <div>
                                             {!placeNameDuplicatesActivity && <strong>{place.name}</strong>}
                                             <small>{place.formattedAddress}</small>
@@ -450,12 +455,13 @@ export default function TripDetail() {
                           )}
                         </div>
 
-                        {apiKey && openMapDay === dayIndex && (
+                         {apiKey && openMapDay === dayIndex && (
                           <section
                             id={`trip-day-map-${dayIndex}`}
                             className="trip-day-map-panel"
-                            aria-label={`Map for day ${dayIndex + 1}`}
+                           aria-label={`Map for day ${dayIndex + 1}`}
                           >
+                            <button type="button" className="trip-day-viewer-close trip-day-map-close" onClick={() => setOpenMapDay(null)} aria-label="Close map">×</button>
                             <TripMap
                               dayPlan={dayPlan}
                               destination={trip.destination}
@@ -470,6 +476,16 @@ export default function TripDetail() {
                               onUpdateActivityMap={(activityIndex, mapUpdates) => (
                                 handleActivityMapUpdate(dayIndex, activityIndex, mapUpdates)
                               )}
+                            />
+                          </section>
+                        )}
+                        {apiKey && openWeatherDay === dayIndex && (
+                          <section id={`trip-day-weather-${dayIndex}`} className="trip-day-weather-panel" aria-label={`Weather for day ${dayIndex + 1}`}>
+                            <DayWeather
+                              dayPlan={dayPlan}
+                              destination={trip.destination}
+                              mappedPlaces={mappedPlacesByDay[dayIndex] || []}
+                              onClose={() => setOpenWeatherDay(null)}
                             />
                           </section>
                         )}
