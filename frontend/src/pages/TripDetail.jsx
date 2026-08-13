@@ -5,6 +5,7 @@ import TripForm from '../components/TripForm';
 import TripMap from '../components/TripMap';
 import DayWeather from '../components/DayWeather';
 import TripShareDialog from '../components/TripShareDialog';
+import TripWorkspace from '../components/TripWorkspace';
 import { useTripContext } from '../context/TripContext';
 import './TripDetail.css';
 
@@ -519,6 +520,7 @@ export default function TripDetail() {
       {showShare && (
         <TripShareDialog trip={trip} onClose={() => setShowShare(false)} />
       )}
+      <TripWorkspace trip={trip} canEdit={canEdit} />
     </main>
   );
 }
