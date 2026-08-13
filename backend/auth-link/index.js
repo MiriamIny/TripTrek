@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import {
   AdminCreateUserCommand,
   AdminLinkProviderForUserCommand,
@@ -6,9 +7,13 @@ import {
   CognitoIdentityProviderClient,
   ListUsersCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb'
 
 const cognito = new CognitoIdentityProviderClient({})
+const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({}))
 const TRUSTED_PROVIDERS = new Set(['Google'])
+const accountKey = (email) => `ACCOUNT#${createHash('sha256').update(email).digest('hex')}`
 
 const attributeValue = (user, name) => (
   user?.Attributes?.find((attribute) => attribute.Name === name)?.Value || ''
@@ -77,16 +82,33 @@ const createNativeDestination = async (event, email) => {
 
 const getOrCreateDestination = async (event, email) => {
   const existing = chooseDestination(await listByEmail(event.userPoolId, email))
-  if (existing) return existing
+  if (existing) return { user: existing, created: false }
 
   try {
-    return await createNativeDestination(event, email)
+    return { user: await createNativeDestination(event, email), created: true }
   } catch (error) {
     if (!['AliasExistsException', 'UsernameExistsException'].includes(error.name)) throw error
     const racedDestination = chooseDestination(await listByEmail(event.userPoolId, email))
     if (!racedDestination) throw error
-    return racedDestination
+    return { user: racedDestination, created: false }
   }
+}
+
+const recordLinkState = async (email, mergedWithExistingPassword) => {
+  await dynamo.send(new UpdateCommand({
+    TableName: process.env.AUTH_TABLE_NAME,
+    Key: { pk: accountKey(email), sk: 'AUTH' },
+    UpdateExpression: [
+      'SET passwordEnabled = :passwordEnabled',
+      'mergeNoticePending = :mergeNoticePending',
+      'linkedAt = :linkedAt',
+    ].join(', '),
+    ExpressionAttributeValues: {
+      ':passwordEnabled': mergedWithExistingPassword,
+      ':mergeNoticePending': mergedWithExistingPassword,
+      ':linkedAt': new Date().toISOString(),
+    },
+  }))
 }
 
 export const handler = async (event) => {
@@ -99,7 +121,7 @@ export const handler = async (event) => {
     throw new Error('Automatic account linking requires a verified Google email address.')
   }
 
-  const destination = await getOrCreateDestination(event, email)
+  const { user: destination, created } = await getOrCreateDestination(event, email)
   await cognito.send(new AdminLinkProviderForUserCommand({
     UserPoolId: event.userPoolId,
     DestinationUser: {
@@ -112,6 +134,7 @@ export const handler = async (event) => {
       ProviderAttributeValue: provider.subject,
     },
   }))
+  await recordLinkState(email, !created)
 
   console.info('Linked verified external identity to canonical Cognito profile.', {
     provider: provider.name,

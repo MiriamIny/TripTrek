@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { fetchAuthSession, fetchUserAttributes } from 'aws-amplify/auth';
+import { tripApiFetch } from '../api/tripApi';
 
 const AuthContext = createContext();
 
@@ -12,6 +13,10 @@ export const AuthProvider = ({ children }) => {
   const [userAttributes, setUserAttributes] = useState(user?.attributes || {});
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authNotice, setAuthNotice] = useState(null);
+  const [mergeNotice, setMergeNotice] = useState(null);
+  const [mergeNoticeChecked, setMergeNoticeChecked] = useState(false);
+  const welcomePendingRef = useRef(false);
+  const wasAuthenticatedRef = useRef(false);
   const isAuthenticated = authStatus === 'authenticated';
 
   useEffect(() => {
@@ -58,20 +63,65 @@ export const AuthProvider = ({ children }) => {
   }, [user?.userId]);
 
   useEffect(() => {
+    let isCurrent = true;
+    if (!isAuthenticated) {
+      setMergeNotice(null);
+      setMergeNoticeChecked(false);
+      return () => { isCurrent = false; };
+    }
+
+    setMergeNotice(null);
+    setMergeNoticeChecked(false);
+    tripApiFetch('accountLookup')
+      .then((response) => response.json())
+      .then((payload) => {
+        if (isCurrent && payload.merged === true) {
+          setMergeNotice({
+            title: 'Your accounts are connected',
+            message: 'Google and email sign-in now open the same Trek A Trip account.',
+          });
+        }
+        if (isCurrent) setMergeNoticeChecked(true);
+      })
+      .catch((error) => {
+        console.warn('Unable to check the one-time account-link notice:', error);
+        if (isCurrent) setMergeNoticeChecked(true);
+      });
+
+    return () => { isCurrent = false; };
+  }, [isAuthenticated, user?.userId]);
+
+  useEffect(() => {
+    const wasAuthenticated = wasAuthenticatedRef.current;
+    wasAuthenticatedRef.current = isAuthenticated;
+
     if (isAuthenticated) {
       setIsAuthModalOpen(false);
-      const googleStartedAt = Number(window.sessionStorage.getItem('trek-a-trip:google-sign-in-pending'));
-      if (Number.isFinite(googleStartedAt) && Date.now() - googleStartedAt < 10 * 60 * 1000) {
-        window.sessionStorage.removeItem('trek-a-trip:google-sign-in-pending');
-        setAuthNotice({
-          title: 'Signed in with Google',
-          message: 'Your verified Google email is connected to one Trek A Trip account, so your trips stay together.',
-        });
-      } else if (googleStartedAt) {
-        window.sessionStorage.removeItem('trek-a-trip:google-sign-in-pending');
-      }
+      window.sessionStorage.removeItem('trek-a-trip:google-sign-in-pending');
+      if (!wasAuthenticated) welcomePendingRef.current = true;
+    } else {
+      welcomePendingRef.current = false;
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !mergeNoticeChecked || !welcomePendingRef.current) return;
+
+    const displayName = (
+      userAttributes.name
+      || user?.attributes?.name
+      || userAttributes.email
+      || user?.signInDetails?.loginId
+      || ''
+    ).trim();
+    if (!displayName) return;
+
+    const firstName = displayName.includes('@')
+      ? displayName.split('@')[0]
+      : displayName.split(/\s+/)[0];
+    welcomePendingRef.current = false;
+    setAuthNotice(mergeNotice || { title: `Welcome back, ${firstName}!` });
+  }, [isAuthenticated, mergeNotice, mergeNoticeChecked, user, userAttributes]);
 
   const signOut = async () => {
     await amplifySignOut();

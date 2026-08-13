@@ -12,17 +12,15 @@ describe('AuthNotice', () => {
     vi.clearAllMocks()
     useAuth.mockReturnValue({
       authNotice: {
-        title: 'Signed in with Google',
-        message: 'Your verified Google email is connected to one Trek A Trip account.',
+        title: 'Welcome back, Miriam!',
       },
       dismissAuthNotice,
     })
   })
 
-  it('shows and dismisses the linked-account notification', () => {
+  it('shows and dismisses the welcome notification', () => {
     render(<AuthNotice />)
-    expect(screen.getByRole('status')).toHaveTextContent('Signed in with Google')
-    expect(screen.getByRole('status')).toHaveTextContent('connected to one Trek A Trip account')
+    expect(screen.getByRole('status')).toHaveTextContent('Welcome back, Miriam!')
 
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss notification' }))
     expect(dismissAuthNotice).toHaveBeenCalledOnce()

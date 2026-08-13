@@ -1,8 +1,15 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Authenticator, IconsProvider, useAuthenticator } from '@aws-amplify/ui-react';
-import { signInWithRedirect, signUp } from 'aws-amplify/auth';
+import {
+  confirmResetPassword,
+  resetPassword,
+  signIn,
+  signInWithRedirect,
+  signUp,
+} from 'aws-amplify/auth';
 import { Modal } from 'react-bootstrap';
+import { publicTripApiFetch, tripApiFetch } from '../api/tripApi';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/TrekATripLogo.png';
 import './AuthModal.css';
@@ -12,7 +19,7 @@ const getFormFields = (email = '') => ({
     name: {
       order: 1,
       label: 'Name',
-      placeholder: 'Your name',
+      placeholder: 'Name',
       isRequired: true,
     },
     email: {
@@ -20,11 +27,13 @@ const getFormFields = (email = '') => ({
       label: 'Email',
       placeholder: 'Email',
       defaultValue: email,
+      isReadOnly: true,
       isRequired: true,
     },
     password: {
       order: 3,
-      placeholder: 'Enter password',
+      label: 'Password',
+      placeholder: 'Password',
       showPasswordButtonLabel: 'Toggle password visibility',
       passwordIsHiddenLabel: 'Password hidden',
       passwordIsShownLabel: 'Password revealed',
@@ -32,7 +41,7 @@ const getFormFields = (email = '') => ({
     },
     confirm_password: {
       order: 4,
-      label: 'Confirm password',
+      label: 'Reenter password',
       placeholder: 'Reenter password',
       showPasswordButtonLabel: 'Toggle password visibility',
       passwordIsHiddenLabel: 'Password hidden',
@@ -47,7 +56,8 @@ const getFormFields = (email = '') => ({
       defaultValue: email,
     },
     password: {
-      placeholder: 'Enter password',
+      label: 'Password',
+      placeholder: ' ',
       showPasswordButtonLabel: 'Toggle password visibility',
       passwordIsHiddenLabel: 'Password hidden',
       passwordIsShownLabel: 'Password revealed',
@@ -74,13 +84,9 @@ const getFormFields = (email = '') => ({
   },
 });
 
-const AuthModeContext = createContext(() => {});
-
 function SignInFooter() {
-  const setAuthMode = useContext(AuthModeContext);
-  const { toForgotPassword, toSignUp } = useAuthenticator((context) => [
+  const { toForgotPassword } = useAuthenticator((context) => [
     context.toForgotPassword,
-    context.toSignUp,
   ]);
 
   return (
@@ -88,63 +94,27 @@ function SignInFooter() {
       <button type="button" className="auth-text-link" onClick={toForgotPassword}>
         Forgot your password?
       </button>
-      <p>
-        Don&apos;t have an account?{' '}
-        <button
-          type="button"
-          className="auth-text-link auth-text-link--strong"
-          onClick={() => {
-            setAuthMode('signUp');
-            toSignUp();
-          }}
-        >
-          Create one
-        </button>
-      </p>
     </div>
   );
 }
 
 function SignUpFooter() {
-  const setAuthMode = useContext(AuthModeContext);
-  const { toSignIn } = useAuthenticator((context) => [context.toSignIn]);
-
-  return (
-    <div className="auth-form-footer">
-      <p>
-        Already have an account?{' '}
-        <button
-          type="button"
-          className="auth-text-link auth-text-link--strong"
-          onClick={() => {
-            setAuthMode('signIn');
-            toSignIn();
-          }}
-        >
-          Sign in
-        </button>
-      </p>
-    </div>
-  );
+  return null;
 }
 
 const authenticatorComponents = {
   Header() {
-    return (
-      <div className="auth-header">
-        <img src={logo} alt="Trek A Trip" className="auth-logo" />
-      </div>
-    );
+    return null;
   },
   SignIn: {
     Header() {
-      return <h3 className="auth-stage-heading">Enter your password</h3>;
+      return null;
     },
     Footer: SignInFooter,
   },
   SignUp: {
     Header() {
-      return <h3 className="auth-stage-heading">Get started</h3>;
+      return null;
     },
     Footer: SignUpFooter,
   },
@@ -199,6 +169,106 @@ const authenticatorServices = {
     }
   },
 };
+
+const inlineSignInComponents = {
+  Header() {
+    return null;
+  },
+  SignIn: {
+    Header() {
+      return null;
+    },
+    Footer: SignInFooter,
+  },
+};
+
+function GooglePasswordSetup({ email, onBack, onComplete }) {
+  const [confirmationCode, setConfirmationCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords must match.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage('');
+    try {
+      await confirmResetPassword({
+        username: email,
+        confirmationCode: confirmationCode.trim(),
+        newPassword: password,
+      });
+      await signIn({ username: email, password });
+      await tripApiFetch('accountLookup', { method: 'PATCH' });
+      onComplete();
+    } catch (error) {
+      console.error('Unable to add an email password:', error);
+      setErrorMessage(error?.message || 'We could not add your password. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="auth-email-stage auth-sign-up-stage auth-google-password-stage">
+      <button
+        type="button"
+        className="auth-back-button auth-back-button--icon"
+        onClick={onBack}
+        aria-label="Back"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6" /></svg>
+      </button>
+      <img src={logo} alt="Trek A Trip" className="auth-logo auth-sign-up-logo" />
+      <h3 className="auth-sign-up-heading">Verify your email to add a password</h3>
+      <p className="auth-google-account-copy">
+        A Google account already uses <strong>{email}</strong>. We sent a verification code to that
+        address so you can safely add email-and-password sign in to the same account.
+      </p>
+      <form className="auth-google-password-form" onSubmit={submit}>
+        <label htmlFor="auth-google-email">Email address</label>
+        <input id="auth-google-email" type="email" value={email} readOnly aria-readonly="true" />
+        <label htmlFor="auth-google-code">Verification code</label>
+        <input
+          id="auth-google-code"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          value={confirmationCode}
+          onChange={(event) => setConfirmationCode(event.target.value)}
+          required
+        />
+        <label htmlFor="auth-google-password">Password</label>
+        <input
+          id="auth-google-password"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+        />
+        <label htmlFor="auth-google-confirm-password">Reenter password</label>
+        <input
+          id="auth-google-confirm-password"
+          type="password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          required
+        />
+        {errorMessage && <p className="auth-email-error" role="alert">{errorMessage}</p>}
+        <button type="submit" className="auth-choice-button auth-email-button" disabled={isSubmitting}>
+          {isSubmitting ? 'Adding password...' : 'Add password'}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 function PasswordRequirements() {
   const triggerRef = useRef(null);
@@ -356,7 +426,7 @@ function PasswordRequirementsPortal({ containerRef, enabled }) {
   return createPortal(<PasswordRequirements />, portalHost);
 }
 
-function AuthenticatorCopy({ containerRef }) {
+function AuthenticatorCopy({ containerRef, hideUsername = false, lockEmail = false }) {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
@@ -367,7 +437,23 @@ function AuthenticatorCopy({ containerRef }) {
       );
       const submitButton = signInForm?.querySelector('.amplify-button--primary');
       if (submitButton && submitButton.textContent?.trim() === 'Sign in') {
-        submitButton.textContent = 'Log in';
+        submitButton.textContent = 'Sign in';
+      }
+      const usernameInput = signInForm?.querySelector('input[name="username"]');
+      const usernameField = usernameInput?.closest('.amplify-field');
+      if (hideUsername && usernameField) usernameField.classList.add('auth-prefilled-email-field');
+
+      const passwordInput = signInForm?.querySelector('input[name="password"]');
+      const passwordField = passwordInput?.closest('.amplify-passwordfield');
+      if (passwordField) passwordField.classList.add('auth-inline-password-field');
+
+      const signUpEmailInput = container.querySelector(
+        'form[data-amplify-form][data-amplify-authenticator-signup] input[name="email"]',
+      );
+      if (lockEmail && signUpEmailInput) {
+        signUpEmailInput.readOnly = true;
+        signUpEmailInput.setAttribute('aria-readonly', 'true');
+        signUpEmailInput.closest('.amplify-field')?.classList.add('auth-verified-email-field');
       }
     };
 
@@ -375,26 +461,35 @@ function AuthenticatorCopy({ containerRef }) {
     const observer = new MutationObserver(updateCopy);
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [containerRef]);
+  }, [containerRef, hideUsername, lockEmail]);
 
   return null;
 }
 
 export default function AuthModal() {
   const { isAuthModalOpen, closeAuth } = useAuth();
-  const [authMode, setAuthMode] = useState('signIn');
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [authStage, setAuthStage] = useState('choice');
+  const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
-  const emailStageRef = useRef(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const authContentRef = useRef(null);
 
-  const selectMode = (mode) => {
-    setAuthMode(mode);
-    setShowEmailForm(false);
-    setGoogleError('');
+  const openSignUp = () => {
+    setAuthStage('signUp');
     setEmailError('');
+    setSuccessMessage('');
+    setGoogleError('');
+  };
+
+  const returnToChoice = () => {
+    setAuthStage('choice');
+    setShowPassword(false);
+    setEmailError('');
+    setSuccessMessage('');
   };
 
   const continueWithGoogle = async () => {
@@ -416,15 +511,17 @@ export default function AuthModal() {
   };
 
   const handleClose = () => {
-    setAuthMode('signIn');
-    setShowEmailForm(false);
+    setAuthStage('choice');
+    setShowPassword(false);
     setIsGoogleLoading(false);
+    setIsEmailLoading(false);
     setGoogleError('');
     setEmailError('');
+    setSuccessMessage('');
     closeAuth();
   };
 
-  const continueWithEmail = (event) => {
+  const continueWithEmail = async (event) => {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !event.currentTarget.checkValidity()) {
@@ -435,7 +532,51 @@ export default function AuthModal() {
     window.sessionStorage.removeItem('trek-a-trip:google-sign-in-pending');
     setEmail(normalizedEmail);
     setEmailError('');
-    setShowEmailForm(true);
+    setSuccessMessage('');
+    setIsEmailLoading(true);
+
+    try {
+      const response = await publicTripApiFetch('accountLookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const { accountType } = await response.json();
+
+      if (accountType === 'none') {
+        openSignUp();
+      } else if (accountType === 'google') {
+        const result = await resetPassword({ username: normalizedEmail });
+        if (
+          result.nextStep?.resetPasswordStep !== 'CONFIRM_RESET_PASSWORD_WITH_CODE'
+          && !result.isPasswordReset
+        ) {
+          throw new Error('Cognito did not start email verification. Please try again.');
+        }
+        setAuthStage('googlePassword');
+      } else if (accountType === 'password') {
+        setShowPassword(true);
+      } else {
+        throw new Error('The account check returned an invalid response.');
+      }
+    } catch (error) {
+      console.error('Unable to continue with email:', error);
+      setEmailError(error?.message || 'We could not check that email. Please try again.');
+    } finally {
+      setIsEmailLoading(false);
+    }
+  };
+
+  const services = {
+    ...authenticatorServices,
+    async handleSignIn(input) {
+      try {
+        return await signIn(input);
+      } catch (error) {
+        if (error?.name === 'UserNotFoundException') openSignUp();
+        throw error;
+      }
+    },
   };
 
   return (
@@ -449,58 +590,52 @@ export default function AuthModal() {
     >
       <Modal.Header closeButton>
         <Modal.Title as="h2" id="auth-modal-title">
-          {authMode === 'signIn' ? 'Sign In' : 'Create Account'}
+          Sign in or create account
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {showEmailForm ? (
-          <div className="auth-email-stage" ref={emailStageRef}>
-            <AuthModeContext.Provider value={setAuthMode}>
-              <IconsProvider icons={passwordIcons}>
-                <Authenticator
-                  key={authMode}
-                  initialState={authMode}
-                  loginMechanisms={['email']}
-                  signUpAttributes={['email', 'name']}
-                  formFields={getFormFields(email)}
-                  components={authenticatorComponents}
-                  services={authenticatorServices}
-                />
-              </IconsProvider>
-            </AuthModeContext.Provider>
+        {authStage === 'googlePassword' ? (
+          <GooglePasswordSetup
+            email={email}
+            onBack={returnToChoice}
+            onComplete={() => {
+              setSuccessMessage('Password added. You are now signed in.');
+            }}
+          />
+        ) : authStage === 'signUp' ? (
+          <div className="auth-email-stage auth-sign-up-stage" ref={authContentRef}>
+            <button
+              type="button"
+              className="auth-back-button auth-back-button--icon"
+              onClick={returnToChoice}
+              aria-label="Back"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m14.5 6-6 6 6 6" />
+              </svg>
+            </button>
+            <img src={logo} alt="Trek A Trip" className="auth-logo auth-sign-up-logo" />
+            <h3 className="auth-sign-up-heading">Get started by creating an account</h3>
+            <IconsProvider icons={passwordIcons}>
+              <Authenticator
+                key={`sign-up-${email}`}
+                initialState="signUp"
+                loginMechanisms={['email']}
+                signUpAttributes={['name']}
+                formFields={getFormFields(email)}
+                components={authenticatorComponents}
+                services={services}
+              />
+            </IconsProvider>
             <PasswordRequirementsPortal
-              containerRef={emailStageRef}
-              enabled={authMode === 'signUp'}
+              containerRef={authContentRef}
+              enabled
             />
-            <AuthenticatorCopy containerRef={emailStageRef} />
+            <AuthenticatorCopy containerRef={authContentRef} lockEmail />
           </div>
         ) : (
-          <section className="auth-choice" aria-labelledby="auth-choice-title">
+          <section className="auth-choice" aria-label="Sign in options">
             <img src={logo} alt="Trek A Trip" className="auth-logo" />
-            <div className="auth-mode-tabs" role="tablist" aria-label="Account action">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={authMode === 'signIn'}
-                className={authMode === 'signIn' ? 'active' : ''}
-                onClick={() => selectMode('signIn')}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={authMode === 'signUp'}
-                className={authMode === 'signUp' ? 'active' : ''}
-                onClick={() => selectMode('signUp')}
-              >
-                Create Account
-              </button>
-            </div>
-
-            <h2 id="auth-choice-title">
-              {authMode === 'signIn' ? 'Welcome back!' : 'Get started!'}
-            </h2>
 
             <button
               type="button"
@@ -515,45 +650,59 @@ export default function AuthModal() {
             <div className="auth-divider"><span>or</span></div>
 
             <form className="auth-email-choice" onSubmit={continueWithEmail} noValidate>
-              <label htmlFor="auth-email">Enter your email</label>
-              <input
-                id="auth-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="Email"
-                value={email}
-                required
-                aria-describedby={emailError ? 'auth-email-error' : undefined}
-                aria-invalid={Boolean(emailError)}
-                onChange={(event) => {
-                  setEmail(event.target.value);
-                  if (emailError) setEmailError('');
-                }}
-              />
+              <div className="auth-floating-field">
+                <input
+                  id="auth-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder=" "
+                  value={email}
+                  required
+                  aria-describedby={emailError ? 'auth-email-error' : undefined}
+                  aria-invalid={Boolean(emailError)}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    if (showPassword) setShowPassword(false);
+                    if (emailError) setEmailError('');
+                  }}
+                />
+                <label htmlFor="auth-email">Email address</label>
+              </div>
               {emailError && (
                 <p id="auth-email-error" className="auth-email-error" role="alert">{emailError}</p>
               )}
-              <button type="submit" className="auth-choice-button auth-email-button">
-                Continue with email
-              </button>
+              {!showPassword && (
+                <button
+                  type="submit"
+                  className="auth-choice-button auth-email-button"
+                  disabled={isEmailLoading}
+                >
+                  {isEmailLoading ? 'Checking email...' : 'Continue with email'}
+                </button>
+              )}
             </form>
+
+            {showPassword && (
+              <div className="auth-inline-sign-in" ref={authContentRef}>
+                <IconsProvider icons={passwordIcons}>
+                  <Authenticator
+                    key={`sign-in-${email}`}
+                    initialState="signIn"
+                    loginMechanisms={['email']}
+                    formFields={getFormFields(email)}
+                    components={inlineSignInComponents}
+                    services={services}
+                  />
+                </IconsProvider>
+                <AuthenticatorCopy containerRef={authContentRef} hideUsername />
+              </div>
+            )}
+
+            {successMessage && <p className="auth-success-message" role="status">{successMessage}</p>}
 
             {googleError && <p className="auth-choice-error" role="alert">{googleError}</p>}
 
-            <p className="auth-mode-prompt">
-              {authMode === 'signIn' ? (
-                <>
-                  Don&apos;t have an account?{' '}
-                  <button type="button" onClick={() => selectMode('signUp')}>Create one</button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{' '}
-                  <button type="button" onClick={() => selectMode('signIn')}>Sign in</button>
-                </>
-              )}
-            </p>
           </section>
         )}
       </Modal.Body>

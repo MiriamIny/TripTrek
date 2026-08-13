@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const send = vi.fn()
+const dbSend = vi.fn()
 vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
   CognitoIdentityProviderClient: vi.fn(() => ({ send })),
   ListUsersCommand: class ListUsersCommand { constructor(input) { this.input = input; this.kind = 'list' } },
   AdminCreateUserCommand: class AdminCreateUserCommand { constructor(input) { this.input = input; this.kind = 'create' } },
   AdminSetUserPasswordCommand: class AdminSetUserPasswordCommand { constructor(input) { this.input = input; this.kind = 'password' } },
   AdminLinkProviderForUserCommand: class AdminLinkProviderForUserCommand { constructor(input) { this.input = input; this.kind = 'link' } },
+}))
+vi.mock('@aws-sdk/client-dynamodb', () => ({ DynamoDBClient: vi.fn() }))
+vi.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: { from: vi.fn(() => ({ send: dbSend })) },
+  UpdateCommand: class UpdateCommand { constructor(input) { this.input = input; this.kind = 'state' } },
 }))
 
 const { handler } = await import('./index.js')
@@ -27,7 +33,11 @@ const googleEvent = (overrides = {}) => ({
 })
 
 describe('Cognito account linker', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubEnv('AUTH_TABLE_NAME', 'trip-table')
+    dbSend.mockResolvedValue({})
+  })
 
   it('links a first Google sign-in to an existing native Cognito account', async () => {
     send
@@ -46,6 +56,10 @@ describe('Cognito account linker', () => {
         ProviderAttributeValue: 'google-subject',
       },
     })
+    expect(dbSend.mock.calls[0][0].input.ExpressionAttributeValues).toMatchObject({
+      ':passwordEnabled': true,
+      ':mergeNoticePending': true,
+    })
   })
 
   it('creates a canonical native profile before a Google-first account is linked', async () => {
@@ -63,6 +77,10 @@ describe('Cognito account linker', () => {
       MessageAction: 'SUPPRESS',
     })
     expect(send.mock.calls[2][0].input).toMatchObject({ Permanent: true })
+    expect(dbSend.mock.calls[0][0].input.ExpressionAttributeValues).toMatchObject({
+      ':passwordEnabled': false,
+      ':mergeNoticePending': false,
+    })
   })
 
   it('rejects unverified external email addresses', async () => {
