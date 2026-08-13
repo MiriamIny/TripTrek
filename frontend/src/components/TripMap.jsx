@@ -10,6 +10,8 @@ import {
 import { buildGoogleMapsUrl, getActivityLocationQueries, isConfidentPlaceMatch } from './tripMapUtils';
 
 const DEFAULT_CENTER = { lat: 20, lng: 0 };
+const MAP_PIN_COLOR = '#e7765b';
+const MAP_PIN_SELECTED_COLOR = '#c95d47';
 const PLACE_FIELDS = [
   'id', 'displayName', 'formattedAddress', 'location', 'googleMapsURI', 'photos',
   'primaryType', 'primaryTypeDisplayName', 'types',
@@ -22,6 +24,30 @@ const placePhoto = (place) => {
   return {
     photoUrl: photo.getURI({ maxWidth: 240, maxHeight: 160 }),
     photoAttributions: photo.authorAttributions || [],
+  };
+};
+
+const mapPinIcon = (number, isSelected = false) => {
+  const width = isSelected ? 34 : 30;
+  const height = isSelected ? 40 : 35;
+  const fill = isSelected ? MAP_PIN_SELECTED_COLOR : MAP_PIN_COLOR;
+  const label = Number.isInteger(number) ? String(number) : '';
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="34" height="40" viewBox="0 0 34 40">
+      <defs>
+        <filter id="shadow" x="-35%" y="-20%" width="170%" height="175%">
+          <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#263b3d" flood-opacity=".28"/>
+        </filter>
+      </defs>
+      <path d="M17 38S4 26.8 4 16.8a13 13 0 1 1 26 0C30 26.8 17 38 17 38Z"
+        fill="${fill}" stroke="#fff" stroke-width="1.4" filter="url(#shadow)"/>
+      ${label ? `<text x="17" y="20" fill="#fff" font-family="Arial, sans-serif" font-size="12" font-weight="700" text-anchor="middle">${label}</text>` : ''}
+    </svg>`;
+
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new window.google.maps.Size(width, height),
+    anchor: new window.google.maps.Point(width / 2, height),
   };
 };
 
@@ -63,6 +89,7 @@ function DayMapViewport({ places, fallbackPlace, selectedPlaceIndex, onSelectPla
       defaultCenter={mapPlaces[0]?.position || DEFAULT_CENTER}
       defaultZoom={mapPlaces.length ? 12 : 2}
       gestureHandling="cooperative"
+      controlSize={30}
       mapTypeControl={false}
       streetViewControl={false}
       fullscreenControl
@@ -72,13 +99,9 @@ function DayMapViewport({ places, fallbackPlace, selectedPlaceIndex, onSelectPla
         <Marker
           key={`${place.name}-${place.position.lat}-${place.position.lng}`}
           position={place.position}
+          icon={mapPinIcon(place.isFallback ? null : index + 1, selectedPlaceIndex === index)}
+          zIndex={selectedPlaceIndex === index ? 2 : 1}
           title={place.isFallback ? place.name : `${index + 1}. ${place.name}`}
-          label={place.isFallback ? undefined : {
-            text: String(index + 1),
-            color: '#ffffff',
-            fontSize: '11px',
-            fontWeight: '700',
-          }}
           onClick={() => onSelectPlace(index)}
         />
       ))}
