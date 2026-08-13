@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { fetchAuthSession, fetchUserAttributes } from 'aws-amplify/auth';
 
@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }) => {
   ]);
   const [userAttributes, setUserAttributes] = useState(user?.attributes || {});
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authNotice, setAuthNotice] = useState(null);
   const isAuthenticated = authStatus === 'authenticated';
 
   useEffect(() => {
@@ -57,13 +58,27 @@ export const AuthProvider = ({ children }) => {
   }, [user?.userId]);
 
   useEffect(() => {
-    if (isAuthenticated) setIsAuthModalOpen(false);
+    if (isAuthenticated) {
+      setIsAuthModalOpen(false);
+      const googleStartedAt = Number(window.sessionStorage.getItem('triptrek:google-sign-in-pending'));
+      if (Number.isFinite(googleStartedAt) && Date.now() - googleStartedAt < 10 * 60 * 1000) {
+        window.sessionStorage.removeItem('triptrek:google-sign-in-pending');
+        setAuthNotice({
+          title: 'Signed in with Google',
+          message: 'Your verified Google email is connected to one Trek A Trip account, so your trips stay together.',
+        });
+      } else if (googleStartedAt) {
+        window.sessionStorage.removeItem('triptrek:google-sign-in-pending');
+      }
+    }
   }, [isAuthenticated]);
 
   const signOut = async () => {
     await amplifySignOut();
     setUserAttributes({});
   };
+
+  const dismissAuthNotice = useCallback(() => setAuthNotice(null), []);
 
   return (
     <AuthContext.Provider
@@ -76,6 +91,8 @@ export const AuthProvider = ({ children }) => {
         isAuthModalOpen,
         openAuth: () => setIsAuthModalOpen(true),
         closeAuth: () => setIsAuthModalOpen(false),
+        authNotice,
+        dismissAuthNotice,
       }}
     >
       {children}

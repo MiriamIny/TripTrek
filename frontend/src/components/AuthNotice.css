@@ -1,0 +1,58 @@
+.auth-account-notice {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 3000;
+  display: grid;
+  width: min(410px, calc(100vw - 2rem));
+  padding: 0.9rem;
+  color: #263b3d;
+  background: #fffdf9;
+  border: 1px solid rgba(22, 123, 53, 0.2);
+  border-radius: 15px;
+  box-shadow: 0 18px 45px rgba(29, 52, 48, 0.2);
+  align-items: start;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.7rem;
+  animation: auth-account-notice-in 180ms ease-out;
+}
+
+.auth-account-notice-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  color: #fff;
+  background: #167b35;
+  border-radius: 50%;
+  place-items: center;
+}
+
+.auth-account-notice-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.auth-account-notice strong,
+.auth-account-notice p { margin: 0; }
+.auth-account-notice strong { display: block; color: #0d5427; font-size: 0.88rem; }
+.auth-account-notice p { margin-top: 0.2rem; color: #637477; font-size: 0.77rem; line-height: 1.4; }
+.auth-account-notice > button { width: 28px; height: 28px; padding: 0; color: #6c7a7c; background: transparent; border: 0; border-radius: 50%; font-size: 1.2rem; line-height: 1; cursor: pointer; }
+.auth-account-notice > button:hover { color: #167b35; background: rgba(22, 123, 53, 0.08); }
+.auth-account-notice > button:focus-visible { outline: 3px solid rgba(231, 118, 91, 0.35); outline-offset: 2px; }
+
+@keyframes auth-account-notice-in {
+  from { opacity: 0; transform: translateY(-8px); }
+}
+
+@media (max-width: 560px) {
+  .auth-account-notice { top: 0.65rem; right: 0.65rem; width: calc(100vw - 1.3rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-account-notice { animation: none; }
+}

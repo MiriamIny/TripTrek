@@ -10,6 +10,7 @@ import NavigationBar from './components/NavigationBar';
 import { TripProvider } from './context/TripContext'; 
 import Chatbot from './components/chatbot/Chatbot';
 import AuthModal from './components/AuthModal';
+import AuthNotice from './components/AuthNotice';
 
 function App() {
   // No need to pass user props anymore
@@ -28,6 +29,7 @@ function App() {
         </div>
         <Chatbot />
         <AuthModal />
+        <AuthNotice />
       </Router>
     </TripProvider>
   );

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Authenticator, IconsProvider, useAuthenticator } from '@aws-amplify/ui-react';
-import { signInWithRedirect } from 'aws-amplify/auth';
+import { signInWithRedirect, signUp } from 'aws-amplify/auth';
 import { Modal } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/TripTrekLogo.png';
@@ -154,6 +154,21 @@ const passwordIcons = {
   passwordField: {
     visibility: <EyeClosedIcon />,
     visibilityOff: <EyeOpenIcon />,
+  },
+};
+
+const authenticatorServices = {
+  async handleSignUp(input) {
+    try {
+      return await signUp(input);
+    } catch (error) {
+      if (['UsernameExistsException', 'AliasExistsException'].includes(error?.name)) {
+        throw new Error(
+          'An account already exists for this email. Continue with Google, or choose Sign in and Forgot your password to add an email password.',
+        );
+      }
+      throw error;
+    }
   },
 };
 
@@ -332,11 +347,13 @@ export default function AuthModal() {
     setIsGoogleLoading(true);
 
     try {
+      window.sessionStorage.setItem('triptrek:google-sign-in-pending', String(Date.now()));
       await signInWithRedirect({
         provider: 'Google',
         options: { prompt: 'SELECT_ACCOUNT' },
       });
     } catch (error) {
+      window.sessionStorage.removeItem('triptrek:google-sign-in-pending');
       console.error('Unable to start Google sign-in:', error);
       setGoogleError('Google sign-in could not be started. Please try again or continue with email.');
       setIsGoogleLoading(false);
@@ -389,6 +406,7 @@ export default function AuthModal() {
                   signUpAttributes={['email', 'name']}
                   formFields={formFields}
                   components={authenticatorComponents}
+                  services={authenticatorServices}
                 />
               </IconsProvider>
             </AuthModeContext.Provider>
@@ -440,7 +458,10 @@ export default function AuthModal() {
             <button
               type="button"
               className="auth-choice-button auth-email-button"
-              onClick={() => setShowEmailForm(true)}
+              onClick={() => {
+                window.sessionStorage.removeItem('triptrek:google-sign-in-pending');
+                setShowEmailForm(true);
+              }}
             >
               Continue with email
             </button>
