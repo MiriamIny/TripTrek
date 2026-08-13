@@ -27,6 +27,10 @@ Parameters:
     Type: String
     Description: From address under the verified SES identity
     Default: hello@trekatrip.com
+  SesConfigurationSetName:
+    Type: String
+    Description: SES configuration set applied to outgoing TripTrek emails
+    Default: my-first-configuration-set
   ContactRecipientEmail:
     Type: String
     Description: Private inbox that receives contact-form messages
@@ -216,7 +220,9 @@ Resources:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentityName}
+              Resource:
+                - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentityName}
+                - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
       Events:
         GetShares:
           Type: HttpApi
@@ -258,7 +264,9 @@ Resources:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentityName}
+              Resource:
+                - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentityName}
+                - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
       Events:
         Contact:
           Type: HttpApi
