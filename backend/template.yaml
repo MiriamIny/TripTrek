@@ -233,7 +233,7 @@ Resources:
       Handler: index.handler
       Runtime: nodejs22.x
       CodeUri: weather/
-      Timeout: 15
+      Timeout: 30
       MemorySize: 256
       Environment:
         Variables:

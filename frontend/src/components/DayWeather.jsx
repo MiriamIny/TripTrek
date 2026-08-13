@@ -29,6 +29,22 @@ const uniqueLocationQueries = (dayPlan, destination, mappedPlaces = []) => {
 
 const temperature = (value) => (Number.isFinite(value) ? `${Math.round(value)}°` : '—');
 const percentage = (value) => (Number.isFinite(value) ? `${value}%` : '—');
+const formatHour = (hour) => {
+  if (!Number.isInteger(hour)) return '—';
+  if (hour === 0) return '12 AM';
+  if (hour === 12) return '12 PM';
+  return `${hour % 12} ${hour < 12 ? 'AM' : 'PM'}`;
+};
+
+function WeatherMetricIcon({ type }) {
+  if (type === 'rain') {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 16h9a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 6.5 4.8 4.8 0 0 0 8 16Z" /><path d="m9 19-1 2M14 19l-1 2M19 18l-1 2" /></svg>;
+  }
+  if (type === 'humidity') {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s-6 6.2-6 11a6 6 0 0 0 12 0c0-4.8-6-11-6-11Z" /><path d="M9.5 15.5c.7 1 1.5 1.5 2.5 1.5" /></svg>;
+  }
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11c2.7 0 2.7-4 0-4-1.2 0-2 .6-2.4 1.5M3 12h16c2.7 0 2.7 4 0 4-1.2 0-2-.6-2.4-1.5M3 16h7" /></svg>;
+}
 
 const addressComponent = (components, types) => (
   components?.find((component) => types.some((type) => component.types.includes(type)))
@@ -103,27 +119,53 @@ function WeatherLocationCard({ location, dayPlan }) {
             <div>
               <span className="trip-day-weather-location">{weather.location}</span>
               <strong>{weather.forecast.description}</strong>
-              <small>High {temperature(weather.forecast.high)} · Low {temperature(weather.forecast.low)}</small>
             </div>
             {weather.forecast.iconUrl && <img src={weather.forecast.iconUrl} alt="" />}
           </header>
 
-          <dl className="trip-day-weather-metrics">
-            <div><dt>Rain</dt><dd>{percentage(weather.forecast.precipitationChance)}</dd></div>
-            <div><dt>Humidity</dt><dd>{percentage(weather.forecast.humidity)}</dd></div>
-            <div><dt>Wind</dt><dd>{Number.isFinite(weather.forecast.windSpeed) ? `${Math.round(weather.forecast.windSpeed)} mph` : '—'}</dd></div>
-          </dl>
-
-          <div className="trip-day-weather-periods" aria-label="Time of day forecast">
+          <div className="trip-day-weather-periods" aria-label="Daytime and nighttime summary">
             {(weather.forecast.periods || []).map((period) => (
-              <section key={period.label}>
-                <span>{period.label}</span>
-                {period.iconUrl && <img src={period.iconUrl} alt="" />}
-                <strong>{period.description}</strong>
-                <small>{percentage(period.precipitationChance)} rain · {percentage(period.humidity)} humidity</small>
-              </section>
+                <section key={period.label}>
+                  <div className="trip-day-weather-period-heading">
+                    <span>{period.label}</span>
+                    <strong>{temperature(period.temperature)}</strong>
+                  </div>
+                  <div className="trip-day-weather-period-condition">
+                    {period.iconUrl && <img src={period.iconUrl} alt="" />}
+                    <strong>{period.description}</strong>
+                  </div>
+                  <dl className="trip-day-weather-period-metrics">
+                    <div><WeatherMetricIcon type="rain" /><dt>Rain</dt><dd>{percentage(period.precipitationChance)}</dd></div>
+                    <div><WeatherMetricIcon type="humidity" /><dt>Humidity</dt><dd>{percentage(period.humidity)}</dd></div>
+                    <div><WeatherMetricIcon type="wind" /><dt>Wind</dt><dd>{Number.isFinite(period.windSpeed) ? `${Math.round(period.windSpeed)} mph` : '—'}</dd></div>
+                  </dl>
+                </section>
             ))}
           </div>
+
+          {weather.hourly?.length ? (
+            <div className="trip-day-weather-hourly-wrap">
+              <div className="trip-day-weather-hourly-heading">
+                <strong>Hourly forecast</strong>
+                <span>Swipe to explore</span>
+              </div>
+              <div className="trip-day-weather-hourly" aria-label="Hourly forecast">
+                {weather.hourly.map((hour) => (
+                  <section key={hour.hour} aria-label={`${formatHour(hour.hour)}: ${hour.description}`}>
+                    <time>{formatHour(hour.hour)}</time>
+                    {hour.iconUrl && <img src={hour.iconUrl} alt="" />}
+                    <strong>{temperature(hour.temperature)}</strong>
+                    <span>{percentage(hour.precipitationChance)} rain</span>
+                    <small title={`${hour.description}. Feels like ${temperature(hour.feelsLike)}. Humidity ${percentage(hour.humidity)}.`}>
+                      {hour.description}
+                    </small>
+                  </section>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="trip-day-weather-hourly-unavailable">Hourly details are not available for this day.</p>
+          )}
         </div>
       )}
     </article>
