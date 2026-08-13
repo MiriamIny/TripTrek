@@ -42,6 +42,33 @@ Parameters:
 
 Resources:
 
+  cognitoAccountLinker:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: cognitoAccountLinker
+      Handler: index.handler
+      Runtime: nodejs22.x
+      CodeUri: auth-link/
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:ListUsers
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminSetUserPassword
+                - cognito-idp:AdminLinkProviderForUser
+              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+
+  CognitoAccountLinkerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref cognitoAccountLinker
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+
   TripTrekTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -379,6 +406,9 @@ Resources:
             ApiId: !Ref TripTrekAPI
 
 Outputs:
+  CognitoAccountLinkerArn:
+    Description: Pre-sign-up Lambda ARN to attach to the existing Cognito user pool
+    Value: !GetAtt cognitoAccountLinker.Arn
   ApiUrl:
     Description: "HTTP API endpoint base URL"
     Value: !Sub "https://${TripTrekAPI}.execute-api.${AWS::Region}.amazonaws.com"

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Authenticator } from '@aws-amplify/ui-react';
-import { signInWithRedirect } from 'aws-amplify/auth';
+import { signInWithRedirect, signUp } from 'aws-amplify/auth';
 import AuthModal from './AuthModal';
 
 vi.mock('@aws-amplify/ui-react', () => ({
@@ -18,6 +18,7 @@ vi.mock('@aws-amplify/ui-react', () => ({
 
 vi.mock('aws-amplify/auth', () => ({
   signInWithRedirect: vi.fn(() => new Promise(() => {})),
+  signUp: vi.fn(),
 }));
 
 vi.mock('../context/AuthContext', () => ({
@@ -97,6 +98,7 @@ describe('AuthModal', () => {
             }),
           }),
         }),
+        services: expect.objectContaining({ handleSignUp: expect.any(Function) }),
       }),
       undefined,
     );
@@ -104,5 +106,20 @@ describe('AuthModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back to Google or email options' }));
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
     expect(screen.queryByTestId('authenticator')).not.toBeInTheDocument();
+  });
+
+  it('turns a duplicate-email sign-up error into account-linking guidance', async () => {
+    render(<AuthModal />);
+    fireEvent.click(screen.getByRole('button', { name: 'Create one' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }));
+
+    const services = Authenticator.mock.calls.at(-1)[0].services;
+    const error = new Error('User already exists');
+    error.name = 'UsernameExistsException';
+    signUp.mockRejectedValueOnce(error);
+
+    await expect(services.handleSignUp({ username: 'miriam@example.com' })).rejects.toThrow(
+      /Continue with Google.*Forgot your password/,
+    );
   });
 });
