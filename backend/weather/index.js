@@ -45,6 +45,16 @@ const parseDate = (value) => {
 
 const weatherIcon = (baseUri) => (baseUri ? `${baseUri}.svg` : '')
 
+const normalizeDayPart = (part, label) => ({
+  label,
+  description: part?.weatherCondition?.description?.text || 'Forecast available',
+  iconUrl: weatherIcon(part?.weatherCondition?.iconBaseUri),
+  precipitationChance: part?.precipitation?.probability?.percent ?? null,
+  humidity: part?.relativeHumidity ?? null,
+  windSpeed: part?.wind?.speed?.value ?? null,
+  windUnit: part?.wind?.speed?.unit || '',
+})
+
 const normalizeForecast = (forecast) => ({
   date: `${forecast.displayDate.year}-${String(forecast.displayDate.month).padStart(2, '0')}-${String(forecast.displayDate.day).padStart(2, '0')}`,
   description: forecast.daytimeForecast?.weatherCondition?.description?.text || 'Forecast available',
@@ -56,6 +66,10 @@ const normalizeForecast = (forecast) => ({
   humidity: forecast.daytimeForecast?.relativeHumidity ?? null,
   windSpeed: forecast.daytimeForecast?.wind?.speed?.value ?? null,
   windUnit: forecast.daytimeForecast?.wind?.speed?.unit || '',
+  periods: [
+    normalizeDayPart(forecast.daytimeForecast, 'Day'),
+    normalizeDayPart(forecast.nighttimeForecast, 'Evening'),
+  ],
 })
 
 export const handler = async (event = {}) => {
