@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { publicTripApiFetch } from '../api/tripApi';
 import './ContactUs.css';
 
 const contactTopics = [
@@ -23,9 +24,8 @@ const subjectOptions = [
   { value: 'other', label: 'Something else' },
 ];
 
-function ContactTopicSelect() {
+function ContactTopicSelect({ value, onChange, disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [value, setValue] = useState('');
   const selectRef = useRef(null);
   const selectedOption = subjectOptions.find((option) => option.value === value);
 
@@ -41,7 +41,7 @@ function ContactTopicSelect() {
   }, [isOpen]);
 
   const chooseOption = (option) => {
-    setValue(option.value);
+    onChange(option.value);
     setIsOpen(false);
   };
 
@@ -57,6 +57,7 @@ function ContactTopicSelect() {
         aria-expanded={isOpen}
         aria-controls="contact-subject-options"
         aria-required="true"
+        disabled={disabled}
         onClick={() => setIsOpen((open) => !open)}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -96,6 +97,45 @@ function ContactTopicSelect() {
 }
 
 function ContactUs() {
+  const [subject, setSubject] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState({ type: '', message: '' });
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    if (!subject) {
+      setFeedback({ type: 'error', message: 'Choose a topic before sending your message.' });
+      document.getElementById('contact-subject')?.focus();
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setFeedback({ type: '', message: '' });
+      const response = await publicTripApiFetch('contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.get('name'),
+          email: formData.get('email'),
+          subject,
+          message: formData.get('message'),
+          website: formData.get('website'),
+        }),
+      });
+      const result = await response.json();
+      form.reset();
+      setSubject('');
+      setFeedback({ type: 'success', message: result.message || 'Thanks! Your message has been sent.' });
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.message || 'We could not send your message. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <main className="contact-page">
       <section className="contact-shell" aria-labelledby="contact-heading">
@@ -133,7 +173,11 @@ function ContactUs() {
             <h2>How can we help?</h2>
           </div>
 
-          <form className="contact-form" onSubmit={(event) => event.preventDefault()}>
+          <form className="contact-form" onSubmit={handleSubmit}>
+            <div className="contact-honeypot" aria-hidden="true">
+              <label htmlFor="contact-website">Website</label>
+              <input id="contact-website" type="text" name="website" tabIndex="-1" autoComplete="off" />
+            </div>
             <div className="contact-field-row">
               <div className="contact-field">
                 <label htmlFor="contact-name">Name</label>
@@ -144,6 +188,7 @@ function ContactUs() {
                   autoComplete="name"
                   placeholder="Your name"
                   required
+                  disabled={submitting}
                 />
               </div>
 
@@ -156,13 +201,14 @@ function ContactUs() {
                   autoComplete="email"
                   placeholder="name@example.com"
                   required
+                  disabled={submitting}
                 />
               </div>
             </div>
 
             <div className="contact-field">
               <label id="contact-subject-label">What can we help with?</label>
-              <ContactTopicSelect />
+              <ContactTopicSelect value={subject} onChange={setSubject} disabled={submitting} />
             </div>
 
             <div className="contact-field">
@@ -174,19 +220,28 @@ function ContactUs() {
                 id="contact-message"
                 name="message"
                 rows="6"
+                minLength="10"
                 maxLength="1500"
                 aria-describedby="contact-message-hint"
                 placeholder="Tell us a little more..."
                 required
+                disabled={submitting}
               />
             </div>
 
-            <button type="submit" className="contact-submit">
-              <span>Send message</span>
+            <button type="submit" className="contact-submit" disabled={submitting}>
+              <span>{submitting ? 'Sending…' : 'Send message'}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h13M13 6l6 6-6 6" />
               </svg>
             </button>
+            <div className="contact-feedback" aria-live="polite">
+              {feedback.message && (
+                <p className={`is-${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>
+                  {feedback.message}
+                </p>
+              )}
+            </div>
           </form>
         </div>
       </section>

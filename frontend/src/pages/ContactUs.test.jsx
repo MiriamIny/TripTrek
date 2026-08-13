@@ -1,9 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ContactUs from './ContactUs';
 
+vi.mock('../api/tripApi', () => ({ publicTripApiFetch: vi.fn() }));
+import { publicTripApiFetch } from '../api/tripApi';
+
 describe('ContactUs component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    publicTripApiFetch.mockResolvedValue({
+      json: vi.fn().mockResolvedValue({ message: 'Thanks! Your message has been sent.' }),
+    });
+  });
   it('renders the contact introduction and support topics', () => {
     render(<ContactUs />);
 
@@ -55,5 +64,22 @@ describe('ContactUs component', () => {
     expect(subjectInput).toHaveTextContent('Trip planning');
     expect(document.querySelector('input[name="subject"]')).toHaveValue('planning');
     expect(messageInput).toHaveValue('I would like help planning a trip.');
+  });
+
+  it('submits the contact message to the public API and shows confirmation', async () => {
+    render(<ContactUs />);
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText(/^name$/i), 'Jane Doe');
+    await user.type(screen.getByLabelText(/^email$/i), 'jane@example.com');
+    await user.click(screen.getByLabelText(/what can we help with/i));
+    await user.click(screen.getByRole('option', { name: /trip planning/i }));
+    await user.type(screen.getByLabelText(/^message$/i), 'Please help with my itinerary.');
+    await user.click(screen.getByRole('button', { name: /send message/i }));
+
+    expect(publicTripApiFetch).toHaveBeenCalledWith('contact', expect.objectContaining({
+      method: 'POST',
+    }));
+    expect(await screen.findByText(/thanks! your message has been sent/i)).toBeInTheDocument();
   });
 });

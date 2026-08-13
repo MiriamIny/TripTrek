@@ -159,7 +159,7 @@ describe('TripContext', () => {
     expect(tripApiFetch.mock.calls[0][0]).toBe('tripShares?tripId=trip-1')
     expect(tripApiFetch.mock.calls[1][0]).toBe('tripShares')
     expect(JSON.parse(tripApiFetch.mock.calls[1][1].body)).toEqual({
-      tripId: 'trip-1', email: 'friend@example.com', permission: 'viewer',
+      tripId: 'trip-1', email: 'friend@example.com', permission: 'viewer', sendEmail: true,
     })
     expect(tripApiFetch.mock.calls[2]).toEqual([
       'tripShares?tripId=trip-1&email=friend%40example.com',

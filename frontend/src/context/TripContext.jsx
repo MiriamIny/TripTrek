@@ -176,11 +176,11 @@ export const TripProvider = ({ children }) => {
     return response.json()
   }, [])
 
-  const shareTrip = useCallback(async (tripId, email, permission = 'editor') => {
+  const shareTrip = useCallback(async (tripId, email, permission = 'editor', sendEmail = true) => {
     const response = await tripApiFetch('tripShares', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tripId, email, permission }),
+      body: JSON.stringify({ tripId, email, permission, sendEmail }),
     })
     return response.json()
   }, [])

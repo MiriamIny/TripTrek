@@ -100,5 +100,26 @@ Browser map keys are included in the built JavaScript and are inspectable. Never
 
 Trekka calls OpenAI through the authenticated backend Lambda. Store the OpenAI key in AWS Secrets Manager as `TrekATrip/openai`; never add an OpenAI key to a `VITE_` variable or frontend file.
 
+### Amazon SES email setup
+
+Contact messages and trip-sharing invitations are sent by backend Lambdas; SES credentials are never exposed to the frontend.
+
+1. In Amazon SES `us-east-1`, verify `trekatrip.com`, enable DKIM, and request production access.
+2. Deploy with a verified sender under that domain and a private contact inbox:
+   ```bash
+   sam deploy --parameter-overrides \
+     ImageUploadBucket=trek-a-trip-images-bucket \
+     CognitoUserPoolId=us-east-1_Ks6i9yln5 \
+     CognitoUserPoolClientId=3n8imnlps0an3lj9rp2umi7bu6 \
+     SesIdentityName=trekatrip.com \
+     SesSenderEmail=hello@trekatrip.com \
+     ContactRecipientEmail=your-private-email@example.com \
+     AppBaseUrl=https://www.trekatrip.com
+   ```
+3. For GitHub Actions deployment, create the repository secret `CONTACT_RECIPIENT_EMAIL`. The workflow passes it to CloudFormation without committing it.
+4. Keep the Amplify single-page-app rewrite configured so email links to `/trips` serve `index.html` rather than returning a 404.
+
+The public contact endpoint validates and escapes input, uses a bot honeypot, and limits each source IP to five submissions per hour. The invite endpoint remains Cognito-authenticated.
+
 ## 📌 **Why TripTrek?**
 ### Because life is better when it's organized. Whether you're a meticulous planner or a spontaneous adventurer, **TripTrek** gives you the flexibility to build and adjust your itinerary on the fly.

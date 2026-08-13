@@ -189,6 +189,15 @@
   flex-direction: column;
 }
 
+.contact-honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .contact-field-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -422,6 +431,13 @@
   transform: translateY(-1px);
 }
 
+.contact-submit:disabled {
+  box-shadow: none;
+  cursor: wait;
+  opacity: 0.7;
+  transform: none;
+}
+
 .contact-submit:hover svg {
   transform: translateX(3px);
 }
@@ -434,6 +450,31 @@
 .contact-submit:active {
   box-shadow: none;
   transform: translateY(0);
+}
+
+.contact-feedback {
+  min-height: 1.35rem;
+  margin-top: -0.45rem;
+}
+
+.contact-feedback p {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.contact-feedback .is-success {
+  color: var(--contact-green-dark);
+  background: #edf7ef;
+  border: 1px solid rgba(22, 123, 53, 0.16);
+}
+
+.contact-feedback .is-error {
+  color: #84382e;
+  background: #fff1ed;
+  border: 1px solid rgba(168, 65, 51, 0.16);
 }
 
 @media (max-width: 860px) {
