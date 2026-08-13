@@ -27,6 +27,7 @@
 }
 
 .auth-email-stage {
+  min-width: 0;
   padding: 0.25rem 0.5rem 0.5rem;
 }
 
@@ -301,6 +302,54 @@
   border-color: #256628;
 }
 
+.auth-email-choice {
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+  text-align: left;
+}
+
+.auth-email-choice label {
+  color: #37474f;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.auth-email-choice input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 0.85rem;
+  color: #263238;
+  background: #fff;
+  border: 1px solid #c8d1ce;
+  border-radius: 9px;
+  font: inherit;
+  text-align: left;
+}
+
+.auth-email-choice input:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.14);
+  outline: 0;
+}
+
+.auth-email-choice input[aria-invalid='true'] {
+  border-color: #b3261e;
+}
+
+.auth-email-choice .auth-email-button {
+  margin-top: 0.15rem;
+}
+
+.auth-email-error {
+  margin: 0;
+  color: #b3261e;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;
@@ -389,18 +438,20 @@
 
 .auth-modal .amplify-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 420px !important;
   padding: 1rem;
   border-radius: 16px;
 }
 
 .auth-modal [data-amplify-container] {
+  min-width: 0;
   width: 100%;
   max-width: 420px;
 }
 
 .auth-modal [data-amplify-router] {
-  overflow: visible;
+  min-width: 0;
+  overflow: hidden;
   background: #fff;
   border: 1px solid rgba(55, 71, 79, 0.08);
   border-radius: 16px;
@@ -423,6 +474,8 @@
 
 .auth-modal [data-amplify-form] {
   width: 100%;
+  min-width: 0 !important;
+  max-width: 100% !important;
   padding: 0.9rem 1rem 1rem !important;
 }
 
@@ -435,6 +488,7 @@
 .auth-modal .amplify-field,
 .auth-modal .amplify-passwordfield {
   width: 100%;
+  min-width: 0;
   gap: 0.25rem;
   margin-bottom: 0.4rem;
   text-align: left;
@@ -513,9 +567,12 @@
 
 .auth-modal .amplify-field-group__field-wrapper {
   width: 100%;
+  min-width: 0;
 }
 
 .auth-modal .amplify-field-group {
+  width: 100%;
+  min-width: 0;
   gap: 0 !important;
   border-radius: 10px;
 }
@@ -601,6 +658,27 @@
   border-radius: 8px;
 }
 
+.auth-modal .auth-stage-heading {
+  margin: 0.15rem 1rem 0;
+  color: #263238;
+  font-size: 1.25rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.auth-modal .amplify-alert,
+.auth-modal .amplify-text,
+.auth-modal [data-amplify-form] p {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.auth-modal [data-amplify-form] .amplify-button {
+  max-width: 100%;
+  white-space: normal;
+}
+
 /* Mode switching happens on the choice screen; hide Amplify's duplicate tab row. */
 .auth-modal .amplify-tabs__list {
   display: none;
@@ -622,7 +700,11 @@
   }
 
   .auth-email-stage {
-    padding: 0.2rem 0.3rem 0.35rem;
+    padding: 0.15rem;
+  }
+
+  .auth-modal [data-amplify-form] {
+    padding: 0.75rem !important;
   }
 
 }

@@ -24,7 +24,7 @@ describe('Chatbot secure API integration', () => {
     })
   })
 
-  it('sends chat messages through the authenticated TripTrek API', async () => {
+  it('sends chat messages through the authenticated Trek A Trip API', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     tripApiFetch.mockResolvedValue({
       json: vi.fn().mockResolvedValue({ reply: 'Pack comfortable walking shoes.' }),

@@ -60,15 +60,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (isAuthenticated) {
       setIsAuthModalOpen(false);
-      const googleStartedAt = Number(window.sessionStorage.getItem('triptrek:google-sign-in-pending'));
+      const googleStartedAt = Number(window.sessionStorage.getItem('trek-a-trip:google-sign-in-pending'));
       if (Number.isFinite(googleStartedAt) && Date.now() - googleStartedAt < 10 * 60 * 1000) {
-        window.sessionStorage.removeItem('triptrek:google-sign-in-pending');
+        window.sessionStorage.removeItem('trek-a-trip:google-sign-in-pending');
         setAuthNotice({
           title: 'Signed in with Google',
           message: 'Your verified Google email is connected to one Trek A Trip account, so your trips stay together.',
         });
       } else if (googleStartedAt) {
-        window.sessionStorage.removeItem('triptrek:google-sign-in-pending');
+        window.sessionStorage.removeItem('trek-a-trip:google-sign-in-pending');
       }
     }
   }, [isAuthenticated]);

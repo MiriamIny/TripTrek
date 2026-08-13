@@ -1043,8 +1043,9 @@
 }
 
 .activity-time-wheel-column > div {
-  height: 154px;
-  padding: 0.22rem 0;
+  --time-wheel-item-height: 36px;
+  height: calc(var(--time-wheel-item-height) * 3);
+  padding: var(--time-wheel-item-height) 0;
   overflow-y: auto;
   background:
     linear-gradient(#f6f8f5, rgba(246, 248, 245, 0)) top / 100% 2.5rem no-repeat,
@@ -1061,9 +1062,10 @@
 .activity-time-wheel-column button {
   display: block;
   width: calc(100% - 0.4rem);
-  min-height: 32px;
-  margin: 0.12rem 0.2rem;
-  padding: 0.35rem 0.25rem;
+  height: var(--time-wheel-item-height);
+  min-height: var(--time-wheel-item-height);
+  margin: 0 0.2rem;
+  padding: 0.25rem;
   color: #66736f;
   background: transparent;
   border: 0;
@@ -1082,23 +1084,19 @@
 
 .activity-time-wheel-column button.is-selected {
   color: #fff;
-  background: var(--form-green);
-  box-shadow: 0 4px 10px rgba(22, 123, 53, 0.18);
+  background: var(--form-coral);
+  box-shadow: 0 4px 10px rgba(232, 116, 91, 0.2);
   font-weight: 850;
 }
 
 .activity-time-wheel-period > div {
-  display: flex;
-  padding: 0.3rem;
-  align-items: stretch;
-  justify-content: center;
-  flex-direction: column;
-  gap: 0.4rem;
+  display: block;
+  padding: var(--time-wheel-item-height) 0;
 }
 
 .activity-time-wheel-period button {
-  width: 100%;
-  margin: 0;
+  width: calc(100% - 0.4rem);
+  margin: 0 0.2rem;
 }
 
 .activity-time-wheel > footer {

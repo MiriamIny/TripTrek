@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
-const HOURS = Array.from({ length: 12 }, (_, index) => String(index + 1));
+const HOURS = ['12', ...Array.from({ length: 11 }, (_, index) => String(index + 1))];
 const MINUTES = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
+const PERIODS = ['AM', 'PM'];
 
 const getTimeParts = (value) => {
   if (value) {
@@ -13,11 +14,10 @@ const getTimeParts = (value) => {
     };
   }
 
-  const now = new Date();
   return {
-    hour: String(now.getHours() % 12 || 12),
-    minute: String(now.getMinutes()).padStart(2, '0'),
-    period: now.getHours() >= 12 ? 'PM' : 'AM',
+    hour: '12',
+    minute: '00',
+    period: 'AM',
   };
 };
 
@@ -83,6 +83,27 @@ export default function ActivityTimeSelect({ value = '', onChange, ariaLabel }) 
     closeAndFocus();
   };
 
+  const selectCenteredOption = (event, field, options) => {
+    const listbox = event.currentTarget;
+    const itemHeight = Number.parseFloat(
+      window.getComputedStyle(listbox).getPropertyValue('--time-wheel-item-height'),
+    ) || 36;
+    const selectedIndex = Math.max(
+      0,
+      Math.min(options.length - 1, Math.round(listbox.scrollTop / itemHeight)),
+    );
+    const nextValue = options[selectedIndex];
+
+    setPendingTime((current) => (
+      current[field] === nextValue ? current : { ...current, [field]: nextValue }
+    ));
+  };
+
+  const chooseOption = (event, field, nextValue) => {
+    setPendingTime((current) => ({ ...current, [field]: nextValue }));
+    event.currentTarget.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  };
+
   return (
     <div className="activity-time-picker" ref={pickerRef}>
       <button
@@ -121,7 +142,11 @@ export default function ActivityTimeSelect({ value = '', onChange, ariaLabel }) 
           <div className="activity-time-wheel-columns">
             <div className="activity-time-wheel-column">
               <span>Hour</span>
-              <div role="listbox" aria-label="Hour">
+              <div
+                role="listbox"
+                aria-label="Hour"
+                onScroll={(event) => selectCenteredOption(event, 'hour', HOURS)}
+              >
                 {HOURS.map((hour) => (
                   <button
                     type="button"
@@ -130,7 +155,7 @@ export default function ActivityTimeSelect({ value = '', onChange, ariaLabel }) 
                     data-selected={pendingTime.hour === hour}
                     className={pendingTime.hour === hour ? 'is-selected' : ''}
                     key={hour}
-                    onClick={() => setPendingTime((current) => ({ ...current, hour }))}
+                    onClick={(event) => chooseOption(event, 'hour', hour)}
                   >
                     {hour}
                   </button>
@@ -140,7 +165,11 @@ export default function ActivityTimeSelect({ value = '', onChange, ariaLabel }) 
 
             <div className="activity-time-wheel-column">
               <span>Minute</span>
-              <div role="listbox" aria-label="Minute">
+              <div
+                role="listbox"
+                aria-label="Minute"
+                onScroll={(event) => selectCenteredOption(event, 'minute', MINUTES)}
+              >
                 {MINUTES.map((minute) => (
                   <button
                     type="button"
@@ -149,7 +178,7 @@ export default function ActivityTimeSelect({ value = '', onChange, ariaLabel }) 
                     data-selected={pendingTime.minute === minute}
                     className={pendingTime.minute === minute ? 'is-selected' : ''}
                     key={minute}
-                    onClick={() => setPendingTime((current) => ({ ...current, minute }))}
+                    onClick={(event) => chooseOption(event, 'minute', minute)}
                   >
                     {minute}
                   </button>
@@ -159,8 +188,12 @@ export default function ActivityTimeSelect({ value = '', onChange, ariaLabel }) 
 
             <div className="activity-time-wheel-column activity-time-wheel-period">
               <span>Period</span>
-              <div role="listbox" aria-label="AM or PM">
-                {['AM', 'PM'].map((period) => (
+              <div
+                role="listbox"
+                aria-label="AM or PM"
+                onScroll={(event) => selectCenteredOption(event, 'period', PERIODS)}
+              >
+                {PERIODS.map((period) => (
                   <button
                     type="button"
                     role="option"
@@ -168,7 +201,7 @@ export default function ActivityTimeSelect({ value = '', onChange, ariaLabel }) 
                     data-selected={pendingTime.period === period}
                     className={pendingTime.period === period ? 'is-selected' : ''}
                     key={period}
-                    onClick={() => setPendingTime((current) => ({ ...current, period }))}
+                    onClick={(event) => chooseOption(event, 'period', period)}
                   >
                     {period}
                   </button>

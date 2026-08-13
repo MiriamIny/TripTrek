@@ -22,7 +22,7 @@ describe('Home component', () => {
 
   const renderHome = () => render(<Home />, { wrapper: MemoryRouter });
 
-  it('introduces TripTrek with a clear landing-page heading', () => {
+  it('introduces Trek A Trip with a clear landing-page heading', () => {
     renderHome();
 
     expect(

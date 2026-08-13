@@ -11,7 +11,7 @@ vi.mock('../context/AuthContext', () => ({
 }));
 
 // Mock the logo import
-vi.mock('../assets/TripTrekLogo.png', () => ({
+vi.mock('../assets/TrekATripLogo.png', () => ({
   default: 'mocked-logo-path'
 }));
 
@@ -61,7 +61,7 @@ describe('NavigationBar', () => {
 
   test('renders logo image with alt text', () => {
     renderNavigationBar();
-    const logo = screen.getByAltText('TripTrek');
+    const logo = screen.getByAltText('Trek A Trip');
     expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute('src', 'mocked-logo-path');
   });

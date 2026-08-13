@@ -13,7 +13,7 @@ const contactTopics = [
   },
   {
     title: 'Ideas & feedback',
-    description: 'A feature request or thought that could improve TripTrek.',
+    description: 'A feature request or thought that could improve Trek A Trip.',
   },
 ];
 

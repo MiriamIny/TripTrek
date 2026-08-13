@@ -24,10 +24,10 @@ const About = () => {
     <main className="about-page">
       <section className="about-hero" aria-labelledby="about-heading">
         <div className="about-hero-copy">
-          <p className="about-eyebrow">About TripTrek</p>
+          <p className="about-eyebrow">About Trek A Trip</p>
           <h1 id="about-heading">Planning should feel like the beginning of the adventure.</h1>
           <p className="about-intro">
-            TripTrek was created to make planning a trip feel clear, personal, and genuinely
+            Trek A Trip was created to make planning a trip feel clear, personal, and genuinely
             exciting—from the first idea to the day you leave.
           </p>
           <Link className="about-hero-link" to="/trips">
@@ -50,7 +50,7 @@ const About = () => {
 
       <section className="about-origin" aria-labelledby="about-origin-heading">
         <div className="about-origin-heading">
-          <p>Why TripTrek exists</p>
+          <p>Why Trek A Trip exists</p>
           <h2 id="about-origin-heading">Less juggling. More looking forward.</h2>
         </div>
         <div className="about-origin-copy">
@@ -59,7 +59,7 @@ const About = () => {
             Or wanted to skip the endless back-and-forth about where to go and what to see?
           </p>
           <p>
-            We did too. TripTrek brings the shape of a journey into one calm view, so you can
+            We did too. Trek A Trip brings the shape of a journey into one calm view, so you can
             build each day, keep the important details close, and head out knowing what comes next.
           </p>
         </div>
@@ -92,7 +92,7 @@ const About = () => {
           <p>From idea to itinerary</p>
           <h2 id="about-journey-heading">Your trip is yours. The plan should be too.</h2>
           <p>
-            TripTrek gives you a simple structure for turning inspiration into something useful.
+            Trek A Trip gives you a simple structure for turning inspiration into something useful.
             Start with a destination, shape the days around what matters to you, and keep refining
             until the plan feels right.
           </p>

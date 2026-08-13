@@ -4,10 +4,10 @@ import { Authenticator, IconsProvider, useAuthenticator } from '@aws-amplify/ui-
 import { signInWithRedirect, signUp } from 'aws-amplify/auth';
 import { Modal } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/TripTrekLogo.png';
+import logo from '../assets/TrekATripLogo.png';
 import './AuthModal.css';
 
-const formFields = {
+const getFormFields = (email = '') => ({
   signUp: {
     name: {
       order: 1,
@@ -17,7 +17,9 @@ const formFields = {
     },
     email: {
       order: 2,
-      placeholder: 'name@example.com',
+      label: 'Email',
+      placeholder: 'Email',
+      defaultValue: email,
       isRequired: true,
     },
     password: {
@@ -41,7 +43,8 @@ const formFields = {
   signIn: {
     username: {
       label: 'Email',
-      placeholder: 'name@example.com',
+      placeholder: 'Email',
+      defaultValue: email,
     },
     password: {
       placeholder: 'Enter password',
@@ -50,7 +53,26 @@ const formFields = {
       passwordIsShownLabel: 'Password revealed',
     },
   },
-};
+  confirmSignUp: {
+    confirmation_code: {
+      label: 'Verification code',
+      placeholder: 'Enter verification code',
+    },
+  },
+  forgotPassword: {
+    username: {
+      label: 'Email',
+      placeholder: 'Email',
+      defaultValue: email,
+    },
+  },
+  confirmResetPassword: {
+    confirmation_code: {
+      label: 'Verification code',
+      placeholder: 'Enter verification code',
+    },
+  },
+});
 
 const AuthModeContext = createContext(() => {});
 
@@ -110,14 +132,20 @@ const authenticatorComponents = {
   Header() {
     return (
       <div className="auth-header">
-        <img src={logo} alt="TripTrek" className="auth-logo" />
+        <img src={logo} alt="Trek A Trip" className="auth-logo" />
       </div>
     );
   },
   SignIn: {
+    Header() {
+      return <h3 className="auth-stage-heading">Enter your password</h3>;
+    },
     Footer: SignInFooter,
   },
   SignUp: {
+    Header() {
+      return <h3 className="auth-stage-heading">Get started</h3>;
+    },
     Footer: SignUpFooter,
   },
 };
@@ -328,18 +356,45 @@ function PasswordRequirementsPortal({ containerRef, enabled }) {
   return createPortal(<PasswordRequirements />, portalHost);
 }
 
+function AuthenticatorCopy({ containerRef }) {
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    const updateCopy = () => {
+      const signInForm = container.querySelector(
+        'form[data-amplify-form][data-amplify-authenticator-signin]',
+      );
+      const submitButton = signInForm?.querySelector('.amplify-button--primary');
+      if (submitButton && submitButton.textContent?.trim() === 'Sign in') {
+        submitButton.textContent = 'Log in';
+      }
+    };
+
+    updateCopy();
+    const observer = new MutationObserver(updateCopy);
+    observer.observe(container, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [containerRef]);
+
+  return null;
+}
+
 export default function AuthModal() {
   const { isAuthModalOpen, closeAuth } = useAuth();
   const [authMode, setAuthMode] = useState('signIn');
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const emailStageRef = useRef(null);
 
   const selectMode = (mode) => {
     setAuthMode(mode);
     setShowEmailForm(false);
     setGoogleError('');
+    setEmailError('');
   };
 
   const continueWithGoogle = async () => {
@@ -347,13 +402,13 @@ export default function AuthModal() {
     setIsGoogleLoading(true);
 
     try {
-      window.sessionStorage.setItem('triptrek:google-sign-in-pending', String(Date.now()));
+      window.sessionStorage.setItem('trek-a-trip:google-sign-in-pending', String(Date.now()));
       await signInWithRedirect({
         provider: 'Google',
         options: { prompt: 'SELECT_ACCOUNT' },
       });
     } catch (error) {
-      window.sessionStorage.removeItem('triptrek:google-sign-in-pending');
+      window.sessionStorage.removeItem('trek-a-trip:google-sign-in-pending');
       console.error('Unable to start Google sign-in:', error);
       setGoogleError('Google sign-in could not be started. Please try again or continue with email.');
       setIsGoogleLoading(false);
@@ -365,7 +420,22 @@ export default function AuthModal() {
     setShowEmailForm(false);
     setIsGoogleLoading(false);
     setGoogleError('');
+    setEmailError('');
     closeAuth();
+  };
+
+  const continueWithEmail = (event) => {
+    event.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !event.currentTarget.checkValidity()) {
+      setEmailError('Enter a valid email address to continue.');
+      return;
+    }
+
+    window.sessionStorage.removeItem('trek-a-trip:google-sign-in-pending');
+    setEmail(normalizedEmail);
+    setEmailError('');
+    setShowEmailForm(true);
   };
 
   return (
@@ -385,18 +455,6 @@ export default function AuthModal() {
       <Modal.Body>
         {showEmailForm ? (
           <div className="auth-email-stage" ref={emailStageRef}>
-            <div className="auth-email-toolbar">
-              <button
-                type="button"
-                className="auth-back-button"
-                onClick={() => setShowEmailForm(false)}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m14.5 6-6 6 6 6" />
-                </svg>
-                <span>Back to Google or email options</span>
-              </button>
-            </div>
             <AuthModeContext.Provider value={setAuthMode}>
               <IconsProvider icons={passwordIcons}>
                 <Authenticator
@@ -404,7 +462,7 @@ export default function AuthModal() {
                   initialState={authMode}
                   loginMechanisms={['email']}
                   signUpAttributes={['email', 'name']}
-                  formFields={formFields}
+                  formFields={getFormFields(email)}
                   components={authenticatorComponents}
                   services={authenticatorServices}
                 />
@@ -414,10 +472,11 @@ export default function AuthModal() {
               containerRef={emailStageRef}
               enabled={authMode === 'signUp'}
             />
+            <AuthenticatorCopy containerRef={emailStageRef} />
           </div>
         ) : (
           <section className="auth-choice" aria-labelledby="auth-choice-title">
-            <img src={logo} alt="TripTrek" className="auth-logo" />
+            <img src={logo} alt="Trek A Trip" className="auth-logo" />
             <div className="auth-mode-tabs" role="tablist" aria-label="Account action">
               <button
                 type="button"
@@ -455,16 +514,30 @@ export default function AuthModal() {
 
             <div className="auth-divider"><span>or</span></div>
 
-            <button
-              type="button"
-              className="auth-choice-button auth-email-button"
-              onClick={() => {
-                window.sessionStorage.removeItem('triptrek:google-sign-in-pending');
-                setShowEmailForm(true);
-              }}
-            >
-              Continue with email
-            </button>
+            <form className="auth-email-choice" onSubmit={continueWithEmail} noValidate>
+              <label htmlFor="auth-email">Enter your email</label>
+              <input
+                id="auth-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="Email"
+                value={email}
+                required
+                aria-describedby={emailError ? 'auth-email-error' : undefined}
+                aria-invalid={Boolean(emailError)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (emailError) setEmailError('');
+                }}
+              />
+              {emailError && (
+                <p id="auth-email-error" className="auth-email-error" role="alert">{emailError}</p>
+              )}
+              <button type="submit" className="auth-choice-button auth-email-button">
+                Continue with email
+              </button>
+            </form>
 
             {googleError && <p className="auth-choice-error" role="alert">{googleError}</p>}
 
