@@ -636,6 +636,35 @@
   gap: 0.32rem;
 }
 
+.trip-day-weather-periods section.is-daytime {
+  background: linear-gradient(145deg, rgba(250, 253, 255, 0.92), rgba(218, 237, 248, 0.78));
+}
+
+.trip-day-weather-periods section.is-nighttime {
+  color: #f7fbf8;
+  background: linear-gradient(145deg, #14284a, #1e3158 68%, #34466a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 5px 14px rgba(18, 35, 67, 0.14);
+}
+
+.trip-day-weather-periods section.is-nighttime .trip-day-weather-period-heading > span,
+.trip-day-weather-periods section.is-nighttime .trip-day-weather-period-metrics svg {
+  color: #ffab91;
+  stroke: #ffab91;
+}
+
+.trip-day-weather-periods section.is-nighttime .trip-day-weather-period-heading > strong,
+.trip-day-weather-periods section.is-nighttime .trip-day-weather-period-metrics dd {
+  color: #fff;
+}
+
+.trip-day-weather-periods section.is-nighttime .trip-day-weather-period-metrics {
+  border-top-color: rgba(255, 255, 255, 0.14);
+}
+
+.trip-day-weather-periods section.is-nighttime .trip-day-weather-period-metrics dt {
+  color: rgba(239, 248, 246, 0.7);
+}
+
 .trip-day-weather-period-heading,
 .trip-day-weather-period-condition {
   display: flex;
@@ -762,6 +791,38 @@
   gap: 0.18rem;
   scroll-snap-align: start;
   text-align: center;
+}
+
+.trip-day-weather-hourly section.is-daytime {
+  background: linear-gradient(165deg, rgba(251, 254, 255, 0.94), rgba(214, 235, 247, 0.82));
+}
+
+.trip-day-weather-hourly section.is-nighttime {
+  color: #f6fbfa;
+  background: linear-gradient(165deg, #14284a, #26385f);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(18, 35, 67, 0.16);
+}
+
+.trip-day-weather-hourly section.is-sunrise {
+  background: linear-gradient(165deg, #758db9 0%, #c5d7e8 48%, #edf7fc 100%);
+}
+
+.trip-day-weather-hourly section.is-sunset {
+  background: linear-gradient(165deg, #8ca9c7 0%, #586f9b 46%, #1b2e53 100%);
+}
+
+.trip-day-weather-hourly section.is-nighttime time,
+.trip-day-weather-hourly section.is-nighttime small {
+  color: rgba(239, 248, 246, 0.72);
+}
+
+.trip-day-weather-hourly section.is-nighttime > strong {
+  color: #fff;
+}
+
+.trip-day-weather-hourly section.is-nighttime > span {
+  color: #b9e5d5;
 }
 
 .trip-day-weather-hourly time {
