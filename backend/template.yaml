@@ -15,6 +15,10 @@ Parameters:
     Type: String
     Description: Cognito app client used by the TripTrek frontend
     Default: 3n8imnlps0an3lj9rp2umi7bu6
+  OpenAIModel:
+    Type: String
+    Description: OpenAI model used by the Trekka travel assistant
+    Default: ft:gpt-3.5-turbo-0125:personal:trekka:C1G5p4GH
 
 Resources:
 
@@ -193,6 +197,33 @@ Resources:
           Properties:
             Path: /tripShares
             Method: DELETE
+            ApiId: !Ref TripTrekAPI
+
+  trekkaChat:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: trekkaChat
+      Handler: index.handler
+      Runtime: nodejs22.x
+      CodeUri: chat/
+      Timeout: 35
+      MemorySize: 256
+      Environment:
+        Variables:
+          OPENAI_SECRET_ID: TripTrek/openai
+          OPENAI_MODEL: !Ref OpenAIModel
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:TripTrek/openai-*
+      Events:
+        Chat:
+          Type: HttpApi
+          Properties:
+            Path: /chat
+            Method: POST
             ApiId: !Ref TripTrekAPI
   
   imageUploader:
