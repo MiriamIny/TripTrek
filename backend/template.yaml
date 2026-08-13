@@ -243,6 +243,33 @@ Resources:
             Method: DELETE
             ApiId: !Ref TripTrekAPI
 
+  tripWorkspace:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: tripWorkspace
+      Handler: index.handler
+      Runtime: nodejs22.x
+      CodeUri: workspace/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TripTrekTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TripTrekTable
+      Events:
+        GetWorkspace:
+          Type: HttpApi
+          Properties:
+            Path: /tripWorkspace
+            Method: GET
+            ApiId: !Ref TripTrekAPI
+        UpdateWorkspace:
+          Type: HttpApi
+          Properties:
+            Path: /tripWorkspace
+            Method: PATCH
+            ApiId: !Ref TripTrekAPI
+
   contactMessage:
     Type: AWS::Serverless::Function
     Properties:

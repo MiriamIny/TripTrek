@@ -1,0 +1,381 @@
+.trip-workspace {
+  --workspace-green: #167b35;
+  --workspace-navy: #294c66;
+  --workspace-navy-soft: #eaf1f5;
+  --workspace-coral: #e7765b;
+  --workspace-ink: #263b3d;
+  --workspace-muted: #68777a;
+  position: fixed;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  z-index: 2100;
+  color: var(--workspace-ink);
+}
+
+.trip-workspace .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.trip-workspace-rail {
+  display: flex;
+  padding: 0.35rem;
+  background: rgba(255, 253, 249, 0.96);
+  border: 1px solid rgba(38, 59, 61, 0.13);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(29, 52, 48, 0.17);
+  gap: 0.25rem;
+  backdrop-filter: blur(12px);
+}
+
+.trip-workspace-tool,
+.trip-workspace-close,
+.trip-workspace-delete {
+  display: grid;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  place-items: center;
+}
+
+.trip-workspace-tool {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  color: #526568;
+  border-radius: 13px;
+  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
+}
+
+.trip-workspace-tool:hover,
+.trip-workspace-tool.is-active {
+  color: var(--workspace-navy);
+  background: var(--workspace-navy-soft);
+  transform: translateY(-1px);
+}
+
+.trip-workspace-tool::before {
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  padding: 0.32rem 0.5rem;
+  color: #fff;
+  background: var(--workspace-ink);
+  border-radius: 7px;
+  content: attr(data-label);
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 130ms ease, transform 130ms ease;
+  white-space: nowrap;
+}
+
+.trip-workspace-tool:hover::before,
+.trip-workspace-tool:focus-visible::before {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.trip-workspace-tool > svg,
+.trip-workspace-header-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.trip-workspace-tool > span {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 0.2rem;
+  color: #fff;
+  background: var(--workspace-coral);
+  border: 2px solid #fff;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  place-items: center;
+}
+
+.trip-workspace-panel {
+  position: absolute;
+  bottom: 67px;
+  left: 0;
+  display: flex;
+  width: min(390px, calc(100vw - 2.5rem));
+  max-height: min(610px, calc(100dvh - 170px));
+  overflow: hidden;
+  background: #fffdf9;
+  border: 1px solid rgba(38, 59, 61, 0.13);
+  border-radius: 22px;
+  box-shadow: 0 24px 65px rgba(29, 52, 48, 0.23);
+  flex-direction: column;
+  animation: trip-workspace-open 180ms ease-out;
+}
+
+.trip-workspace-header {
+  display: grid;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f4f8f1, #fff8f2);
+  border-bottom: 1px solid rgba(38, 59, 61, 0.08);
+  align-items: center;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+}
+
+.trip-workspace-header-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  color: var(--workspace-navy);
+  background: var(--workspace-navy-soft);
+  border-radius: 12px;
+  place-items: center;
+}
+
+.trip-workspace-header h2,
+.trip-workspace-header p {
+  margin: 0;
+}
+
+.trip-workspace-header h2 {
+  color: var(--workspace-ink);
+  font-family: 'League Spartan', 'Segoe UI', sans-serif;
+  font-size: 1.25rem;
+  line-height: 1.05;
+}
+
+.trip-workspace-header p {
+  margin-top: 0.18rem;
+  color: var(--workspace-muted);
+  font-size: 0.72rem;
+}
+
+.trip-workspace-close {
+  width: 34px;
+  height: 34px;
+  color: #66777a;
+  border-radius: 50%;
+}
+
+.trip-workspace-close:hover { color: var(--workspace-green); background: rgba(22, 123, 53, 0.08); }
+.trip-workspace-close svg { width: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.8; }
+
+.trip-workspace-body {
+  min-height: 230px;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.trip-workspace-notes label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--workspace-ink);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.trip-workspace-notes textarea {
+  display: block;
+  width: 100%;
+  min-height: 290px;
+  padding: 0.85rem;
+  color: var(--workspace-ink);
+  background: #fff;
+  border: 1px solid #cfdad6;
+  border-radius: 13px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.trip-workspace-notes textarea:focus,
+.trip-workspace-add input:focus {
+  border-color: var(--workspace-green);
+  box-shadow: 0 0 0 3px rgba(22, 123, 53, 0.11);
+  outline: 0;
+}
+
+.trip-workspace-notes textarea[readonly] { color: #546568; background: #f7f7f4; }
+
+.trip-workspace-add {
+  display: grid;
+  margin-bottom: 0.85rem;
+  grid-template-columns: 1fr auto;
+}
+
+.trip-workspace-add input {
+  min-width: 0;
+  height: 43px;
+  padding: 0 0.8rem;
+  border: 1px solid #cfdad6;
+  border-right: 0;
+  border-radius: 12px 0 0 12px;
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.trip-workspace-add button {
+  width: 44px;
+  padding: 0;
+  color: #fff;
+  background: var(--workspace-green);
+  border: 0;
+  border-radius: 0 12px 12px 0;
+  font-size: 1.45rem;
+  cursor: pointer;
+}
+
+.trip-workspace-add button:hover { background: #0d642b; }
+
+.trip-workspace-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 0.35rem;
+}
+
+.trip-workspace-list li {
+  display: grid;
+  min-height: 42px;
+  padding: 0.32rem 0.35rem 0.32rem 0.55rem;
+  border-radius: 10px;
+  align-items: center;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+}
+
+.trip-workspace-list li:hover { background: #f5f5ef; }
+.trip-workspace-list label { display: flex; min-width: 0; align-items: flex-start; gap: 0.62rem; cursor: pointer; }
+.trip-workspace-list label > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.trip-workspace-list label > span:last-child { padding-top: 0.06rem; overflow-wrap: anywhere; font-size: 0.84rem; line-height: 1.35; }
+
+.trip-workspace-check {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  color: transparent;
+  background: #fff;
+  border: 1.5px solid #b8c8c1;
+  border-radius: 6px;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.trip-workspace-check svg { width: 13px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.trip-workspace-list input:checked + .trip-workspace-check { color: #fff; background: var(--workspace-green); border-color: var(--workspace-green); }
+.trip-workspace-list input:focus-visible + .trip-workspace-check { outline: 3px solid rgba(22, 123, 53, 0.2); outline-offset: 2px; }
+.trip-workspace-list .is-complete label > span:last-child { color: #8a9798; text-decoration: line-through; }
+
+.trip-workspace-delete {
+  width: 31px;
+  height: 31px;
+  color: #869395;
+  border-radius: 8px;
+  opacity: 0;
+}
+
+.trip-workspace-list li:hover .trip-workspace-delete,
+.trip-workspace-delete:focus-visible { opacity: 1; }
+.trip-workspace-delete:hover { color: #b94e3c; background: #fff0ec; }
+.trip-workspace-delete svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+
+.trip-workspace-empty,
+.trip-workspace-loading {
+  display: flex;
+  min-height: 190px;
+  color: var(--workspace-muted);
+  align-items: center;
+  justify-content: center;
+}
+
+.trip-workspace-empty { text-align: center; flex-direction: column; }
+.trip-workspace-empty > svg { width: 32px; height: 32px; margin-bottom: 0.7rem; fill: none; stroke: #9cafaa; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.45; }
+.trip-workspace-empty strong { color: var(--workspace-ink); font-size: 0.86rem; }
+.trip-workspace-empty p { margin: 0.25rem 0 0; font-size: 0.77rem; }
+.trip-workspace-loading { gap: 0.5rem; font-size: 0.8rem; }
+.trip-workspace-loading span { width: 15px; height: 15px; border: 2px solid #cfdad6; border-top-color: var(--workspace-green); border-radius: 50%; animation: trip-workspace-spin 650ms linear infinite; }
+
+.trip-workspace-footer {
+  display: flex;
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  color: var(--workspace-muted);
+  background: #faf9f5;
+  border-top: 1px solid rgba(38, 59, 61, 0.08);
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.7rem;
+}
+
+.trip-workspace-save-state { margin-left: auto; color: var(--workspace-green); font-weight: 700; }
+.trip-workspace-save-state.is-error { color: #b94e3c; }
+.trip-workspace-error { margin: 0; padding: 0.55rem 1rem; color: #9b3f32; background: #fff0ec; font-size: 0.73rem; }
+.trip-workspace-tool:focus-visible, .trip-workspace-close:focus-visible, .trip-workspace-delete:focus-visible, .trip-workspace-add button:focus-visible { outline: 3px solid rgba(231, 118, 91, 0.35); outline-offset: 2px; }
+
+@keyframes trip-workspace-open { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+@keyframes trip-workspace-spin { to { transform: rotate(360deg); } }
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .trip-workspace {
+    right: 1.25rem;
+    bottom: 5.9rem;
+    left: auto;
+  }
+
+  .trip-workspace-rail {
+    flex-direction: column;
+  }
+
+  .trip-workspace-panel {
+    right: calc(100% + 0.75rem);
+    bottom: 0;
+    left: auto;
+    transform-origin: bottom right;
+  }
+
+  .trip-workspace-tool::before {
+    top: 50%;
+    right: calc(100% + 9px);
+    bottom: auto;
+    left: auto;
+    transform: translate(4px, -50%);
+  }
+
+  .trip-workspace-tool:hover::before,
+  .trip-workspace-tool:focus-visible::before {
+    transform: translate(0, -50%);
+  }
+}
+
+@media (max-width: 560px) {
+  .trip-workspace { right: auto; bottom: 0.75rem; left: 0.75rem; }
+  .trip-workspace-panel { bottom: 64px; width: calc(100vw - 1.5rem); max-height: calc(100dvh - 155px); border-radius: 20px; }
+  .trip-workspace-body { min-height: 190px; }
+  .trip-workspace-notes textarea { min-height: 230px; }
+  .trip-workspace-delete { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trip-workspace-panel { animation: none; }
+  .trip-workspace-tool { transition: none; }
+}

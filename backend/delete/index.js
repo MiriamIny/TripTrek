@@ -44,6 +44,7 @@ export const handler = async (event) => {
     const shareRows = shareResult.Items || []
     const keys = [
       { pk: userId, sk: tripId },
+      { pk: userId, sk: `WORKSPACE#${tripId}` },
       ...shareRows.flatMap((share) => [
         { pk: share.pk, sk: share.sk },
         { pk: `INVITEE#${share.email}`, sk: `TRIP#${userId}#${tripId}` },
