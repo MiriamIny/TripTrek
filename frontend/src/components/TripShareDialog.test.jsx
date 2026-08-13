@@ -53,12 +53,17 @@ describe('TripShareDialog', () => {
     fireEvent.change(screen.getByLabelText('Email address'), {
       target: { value: 'friend@example.com' },
     })
+    fireEvent.change(screen.getByLabelText(/Personal message/), {
+      target: { value: 'Can’t wait to plan this together!' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Add access' }))
 
     await waitFor(() => expect(shareTrip).toHaveBeenCalledWith(
       'trip-1',
       'friend@example.com',
       'viewer',
+      true,
+      'Can’t wait to plan this together!',
     ))
   })
 

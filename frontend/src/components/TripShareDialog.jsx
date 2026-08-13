@@ -7,6 +7,7 @@ const PERMISSION_OPTIONS = [
   { value: 'editor', label: 'Editor', description: 'Can view and edit the trip' },
   { value: 'viewer', label: 'Viewer', description: 'Can view but not make changes' },
 ]
+const INVITATION_MESSAGE_LIMIT = 500
 
 function PermissionDropdown({ value, onChange, disabled, label }) {
   const [open, setOpen] = useState(false)
@@ -92,6 +93,7 @@ export default function TripShareDialog({ trip, onClose }) {
   const [collaborators, setCollaborators] = useState([])
   const [email, setEmail] = useState('')
   const [permission, setPermission] = useState('editor')
+  const [invitationMessage, setInvitationMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -155,8 +157,9 @@ export default function TripShareDialog({ trip, onClose }) {
     setError('')
     setMessage('')
     try {
-      const result = await shareTrip(trip.id, email, permission)
+      const result = await shareTrip(trip.id, email, permission, true, invitationMessage.trim())
       setEmail('')
+      setInvitationMessage('')
       setMessage(result.invitationEmailSent
         ? `${permission === 'editor' ? 'Editor' : 'Viewer'} access added and invitation emailed.`
         : `${permission === 'editor' ? 'Editor' : 'Viewer'} access added, but the invitation email could not be sent. They can still sign in with that email to view the trip.`)
@@ -253,6 +256,21 @@ export default function TripShareDialog({ trip, onClose }) {
             <button className="trip-share-submit" type="submit" disabled={saving || !email.trim()}>
               {saving ? 'Adding…' : 'Add access'}
             </button>
+          </div>
+          <div className="trip-share-message-field">
+            <div className="trip-share-message-label">
+              <label htmlFor="trip-share-message">Personal message <span>(optional)</span></label>
+              <small>{invitationMessage.length}/{INVITATION_MESSAGE_LIMIT}</small>
+            </div>
+            <textarea
+              id="trip-share-message"
+              value={invitationMessage}
+              onChange={(event) => setInvitationMessage(event.target.value)}
+              placeholder="Add a note to the invitation…"
+              rows="3"
+              maxLength={INVITATION_MESSAGE_LIMIT}
+              disabled={saving}
+            />
           </div>
         </form>
 

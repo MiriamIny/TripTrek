@@ -20,6 +20,7 @@ const headers = {
 const response = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) })
 const normalizeEmail = (value) => typeof value === 'string' ? value.trim().toLowerCase() : ''
 const validEmail = (email) => email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+const normalizeMessage = (value) => typeof value === 'string' ? value.trim() : ''
 const tripKey = (ownerId, tripId) => `TRIP#${ownerId}#${tripId}`
 const PERMISSIONS = new Set(['editor', 'viewer'])
 const escapeHtml = (value) => String(value || '')
@@ -34,7 +35,14 @@ const getOwnedTrip = (ownerId, tripId) => db.send(new GetCommand({
   Key: { pk: ownerId, sk: tripId },
 }))
 
-const sendInvitation = ({ email, permission, trip, inviterName, inviterEmail }) => {
+const sendInvitation = ({
+  email,
+  permission,
+  trip,
+  inviterName,
+  inviterEmail,
+  invitationMessage,
+}) => {
   const destination = trip.destination || 'a trip'
   const inviter = inviterName || inviterEmail || 'Someone'
   const accessDescription = permission === 'editor'
@@ -43,6 +51,12 @@ const sendInvitation = ({ email, permission, trip, inviterName, inviterEmail }) 
   const tripUrl = `${APP_BASE_URL}/trips`
   const dates = trip.startDate && trip.endDate
     ? `${trip.startDate} – ${trip.endDate}`
+    : ''
+  const messageText = invitationMessage
+    ? `\n\nA note from ${inviter}:\n${invitationMessage}`
+    : ''
+  const messageHtml = invitationMessage
+    ? `<div style="margin:20px 0;padding:16px 18px;background:#f6f3ee;border-left:4px solid #e7765b;border-radius:8px"><p style="margin:0 0 8px;color:#647477;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">A note from ${escapeHtml(inviter)}</p><p style="margin:0;line-height:1.55;white-space:pre-wrap">${escapeHtml(invitationMessage)}</p></div>`
     : ''
 
   return ses.send(new SendEmailCommand({
@@ -54,11 +68,11 @@ const sendInvitation = ({ email, permission, trip, inviterName, inviterEmail }) 
         Subject: { Data: `${inviter} invited you to ${destination}`, Charset: 'UTF-8' },
         Body: {
           Text: {
-            Data: `${inviter} invited you to collaborate on ${destination} in Trek A Trip.\n${dates ? `${dates}\n` : ''}You can ${accessDescription}.\n\nOpen trip: ${tripUrl}\n\nSign in or create an account using ${email} to access the trip.`,
+            Data: `${inviter} invited you to collaborate on ${destination} in Trek A Trip.\n${dates ? `${dates}\n` : ''}You can ${accessDescription}.${messageText}\n\nOpen trip: ${tripUrl}\n\nSign in or create an account using ${email} to access the trip.`,
             Charset: 'UTF-8',
           },
           Html: {
-            Data: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#263b3d"><div style="padding:24px;background:#0d5427;color:#fff;border-radius:16px 16px 0 0"><strong style="font-size:22px">Trek A Trip</strong></div><div style="padding:28px;border:1px solid #dfe7e2;border-top:0;border-radius:0 0 16px 16px"><p style="color:#e7765b;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Trip invitation</p><h1 style="font-size:26px;margin:8px 0 16px">You’re invited to ${escapeHtml(destination)}</h1><p><strong>${escapeHtml(inviter)}</strong> invited you to ${escapeHtml(accessDescription)}.</p>${dates ? `<p style="color:#647477">${escapeHtml(dates)}</p>` : ''}<a href="${tripUrl}" style="display:inline-block;margin:14px 0;padding:12px 20px;background:#167b35;color:#fff;text-decoration:none;border-radius:9px;font-weight:700">View trip</a><p style="font-size:13px;color:#647477">Sign in or create an account using <strong>${escapeHtml(email)}</strong> to access this trip.</p></div></div>`,
+            Data: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#263b3d"><div style="padding:24px;background:#0d5427;color:#fff;border-radius:16px 16px 0 0"><strong style="font-size:22px">Trek A Trip</strong></div><div style="padding:28px;border:1px solid #dfe7e2;border-top:0;border-radius:0 0 16px 16px"><p style="color:#e7765b;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Trip invitation</p><h1 style="font-size:26px;margin:8px 0 16px">You’re invited to ${escapeHtml(destination)}</h1><p><strong>${escapeHtml(inviter)}</strong> invited you to ${escapeHtml(accessDescription)}.</p>${dates ? `<p style="color:#647477">${escapeHtml(dates)}</p>` : ''}${messageHtml}<a href="${tripUrl}" style="display:inline-block;margin:14px 0;padding:12px 20px;background:#167b35;color:#fff;text-decoration:none;border-radius:9px;font-weight:700">View trip</a><p style="font-size:13px;color:#647477">Sign in or create an account using <strong>${escapeHtml(email)}</strong> to access this trip.</p></div></div>`,
             Charset: 'UTF-8',
           },
         },
@@ -85,11 +99,15 @@ export const handler = async (event) => {
     const email = normalizeEmail(body?.email)
     const permission = body?.permission || 'editor'
     const sendEmail = body?.sendEmail !== false
+    const invitationMessage = normalizeMessage(body?.invitationMessage)
     if (!tripId || !validEmail(email)) {
       return response(400, { message: 'Enter a valid email address.' })
     }
     if (!PERMISSIONS.has(permission)) {
       return response(400, { message: 'Choose either Editor or Viewer access.' })
+    }
+    if (invitationMessage.length > 500) {
+      return response(400, { message: 'Keep the invitation message to 500 characters or fewer.' })
     }
     if (email === callerEmail) {
       return response(400, { message: 'This trip already belongs to you.' })
@@ -140,6 +158,7 @@ export const handler = async (event) => {
             trip: trip.Item,
             inviterName: invite.invitedByName,
             inviterEmail: invite.invitedByEmail,
+            invitationMessage,
           })
           invitationEmailSent = true
         } catch (emailError) {
