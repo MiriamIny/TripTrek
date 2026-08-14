@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { eachDayOfInterval, format, parse } from 'date-fns';
 import imageCompression from 'browser-image-compression';
 import { APIProvider } from '@vis.gl/react-google-maps';
@@ -7,6 +7,12 @@ import { useAuth } from '../context/AuthContext';
 import ActivityTimeSelect from './ActivityTimeSelect';
 import PlaceAddressAutocomplete from './PlaceAddressAutocomplete';
 import TripDatePicker from './TripDatePicker';
+import {
+  createActivity,
+  ensureActivityIds,
+  mergeTripDraft,
+  tripDraftSignature,
+} from '../utils/tripAutosave';
 import './TripForm.css';
 
 const parseMDY = (value) => parse(value, 'MM/dd/yyyy', new Date());
@@ -72,15 +78,51 @@ function CalendarIcon() {
   );
 }
 
-function TripFormContent({ trip = {}, onSave, onCancel, mapsEnabled = false }) {
+const getDraftStorageKey = (trip) => {
+  const tripId = trip.id || trip.tripId || trip.sk;
+  if (!tripId) return '';
+  return `trek-a-trip:trip-draft:${trip.ownerId || trip.pk || 'owner'}:${tripId}`;
+};
+
+const recoverLocalDraft = (trip, storageKey) => {
+  if (!storageKey || typeof window === 'undefined') return trip;
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(storageKey));
+    if (stored?.trip) {
+      const recovered = stored.baseTrip
+        ? mergeTripDraft(stored.baseTrip, stored.trip, trip)
+        : { ...trip, ...stored.trip };
+      return { ...recovered, version: Number(trip.version ?? 0) };
+    }
+  } catch {
+    window.localStorage.removeItem(storageKey);
+  }
+  return trip;
+};
+
+function TripFormContent({
+  trip = {},
+  onSave,
+  onAutoSave,
+  onAutoSaveError,
+  onDone,
+  onCancel,
+  mapsEnabled = false,
+}) {
   const { uploadTripImage } = useTripContext();
   const { user } = useAuth();
-  const [imageUrl, setImageUrl] = useState(trip.imageUrl || '');
-  const [destination, setDestination] = useState(trip.destination || '');
-  const [startDate, setStartDate] = useState(trip.startDate || '');
-  const [endDate, setEndDate] = useState(trip.endDate || '');
+  const isEditing = Boolean(trip.id || trip.tripId || trip.sk);
+  const draftStorageKey = useMemo(() => getDraftStorageKey(trip), [trip]);
+  const initialTrip = useMemo(
+    () => recoverLocalDraft(trip, draftStorageKey),
+    [draftStorageKey, trip],
+  );
+  const [imageUrl, setImageUrl] = useState(initialTrip.imageUrl || '');
+  const [destination, setDestination] = useState(initialTrip.destination || '');
+  const [startDate, setStartDate] = useState(initialTrip.startDate || '');
+  const [endDate, setEndDate] = useState(initialTrip.endDate || '');
   const [itinerary, setItinerary] = useState(
-    (trip.itinerary || []).map((day) => ({
+    ensureActivityIds(initialTrip.itinerary || []).map((day) => ({
       ...day,
       activities: orderActivities(day.activities || []),
     })),
@@ -93,7 +135,15 @@ function TripFormContent({ trip = {}, onSave, onCancel, mapsEnabled = false }) {
   const [error, setError] = useState('');
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [isPreparingImage, setIsPreparingImage] = useState(false);
-  const isEditing = Boolean(trip.id || trip.tripId || trip.sk);
+  const [saveStatus, setSaveStatus] = useState(isEditing ? 'saved' : 'idle');
+  const autosaveTimerRef = useRef(null);
+  const saveChainRef = useRef(Promise.resolve());
+  const savedVersionRef = useRef(Number(trip.version ?? 0));
+  const saveFailedRef = useRef(false);
+  const baseTripRef = useRef(trip);
+  const currentDraftRef = useRef(null);
+  const initialSignatureRef = useRef(tripDraftSignature(trip));
+  const lastQueuedSignatureRef = useRef(initialSignatureRef.current);
 
   useEffect(() => {
     if (startDate && endDate) {
@@ -135,7 +185,10 @@ function TripFormContent({ trip = {}, onSave, onCancel, mapsEnabled = false }) {
     const formattedTime = time ? formatTime12Hour(time) : '';
     setItinerary((previous) => previous.map((day) => {
       if (day.date !== date) return day;
-      const activities = orderActivities([...day.activities, { time: formattedTime, name, location }]);
+      const activities = orderActivities([
+        ...day.activities,
+        createActivity({ time: formattedTime, name, location }),
+      ]);
       return { ...day, activities };
     }));
     setNewActivityTime((previous) => ({ ...previous, [date]: '' }));
@@ -220,17 +273,123 @@ function TripFormContent({ trip = {}, onSave, onCancel, mapsEnabled = false }) {
       });
       setSelectedImageFile(compressedFile);
       setImageUrl(URL.createObjectURL(compressedFile));
+      if (isEditing) {
+        const uploadedImageUrl = await uploadTripImage(
+          compressedFile,
+          destination || 'trip',
+          trip.id || trip.tripId || trip.sk,
+        );
+        setImageUrl(uploadedImageUrl);
+        setSelectedImageFile(null);
+      }
     } catch (compressionError) {
       console.error('Image compression failed:', compressionError);
-      setSelectedImageFile(file);
-      setImageUrl(URL.createObjectURL(file));
+      if (isEditing) {
+        setError('Unable to upload that photo. Your other changes are still safe.');
+      } else {
+        setSelectedImageFile(file);
+        setImageUrl(URL.createObjectURL(file));
+      }
     } finally {
       setIsPreparingImage(false);
     }
   };
 
+  const currentDraft = useMemo(() => ({
+    ...initialTrip,
+    destination: destination.trim(),
+    startDate,
+    endDate,
+    itinerary: itinerary.map((day) => ({
+      date: day.date,
+      activities: [...day.activities],
+    })),
+    imageUrl: selectedImageFile ? (initialTrip.imageUrl || '') : imageUrl,
+    user: { userId: user?.userId },
+  }), [destination, endDate, imageUrl, initialTrip, itinerary, selectedImageFile, startDate, user?.userId]);
+
+  currentDraftRef.current = currentDraft;
+
+  const queueAutosave = useCallback((draft, force = false) => {
+    if (!isEditing || !onAutoSave) return saveChainRef.current;
+    const signature = tripDraftSignature(draft);
+    if (!force && signature === lastQueuedSignatureRef.current) return saveChainRef.current;
+    lastQueuedSignatureRef.current = signature;
+    saveFailedRef.current = false;
+
+    saveChainRef.current = saveChainRef.current.catch(() => {}).then(async () => {
+      setSaveStatus('saving');
+      try {
+        const savedTrip = await onAutoSave({ ...draft, version: savedVersionRef.current });
+        savedVersionRef.current = Number(savedTrip?.version ?? savedVersionRef.current);
+        if (savedTrip) baseTripRef.current = savedTrip;
+        saveFailedRef.current = false;
+        if (tripDraftSignature(currentDraftRef.current) === signature) {
+          window.localStorage.removeItem(draftStorageKey);
+          setSaveStatus('saved');
+        } else {
+          setSaveStatus('unsaved');
+        }
+        return savedTrip;
+      } catch (autosaveError) {
+        saveFailedRef.current = true;
+        setSaveStatus('error');
+        onAutoSaveError?.(autosaveError);
+        return null;
+      }
+    });
+    return saveChainRef.current;
+  }, [draftStorageKey, isEditing, onAutoSave, onAutoSaveError]);
+
+  useEffect(() => {
+    if (!isEditing || !onAutoSave) return undefined;
+    const signature = tripDraftSignature(currentDraft);
+    if (signature === initialSignatureRef.current && signature === lastQueuedSignatureRef.current) {
+      return undefined;
+    }
+
+    window.localStorage.setItem(draftStorageKey, JSON.stringify({
+      serverVersion: savedVersionRef.current,
+      updatedAt: new Date().toISOString(),
+      baseTrip: baseTripRef.current,
+      trip: currentDraft,
+    }));
+    setSaveStatus('unsaved');
+    if (!currentDraft.destination || !currentDraft.startDate || !currentDraft.endDate) {
+      return undefined;
+    }
+    window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(() => queueAutosave(currentDraft), 800);
+    return () => window.clearTimeout(autosaveTimerRef.current);
+  }, [currentDraft, draftStorageKey, isEditing, onAutoSave, queueAutosave]);
+
+  useEffect(() => {
+    if (!isEditing || saveStatus === 'saved') return undefined;
+    const protectUnsyncedDraft = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', protectUnsyncedDraft);
+    return () => window.removeEventListener('beforeunload', protectUnsyncedDraft);
+  }, [isEditing, saveStatus]);
+
+  const handleDone = async () => {
+    if (!destination.trim() || !startDate || !endDate) {
+      setError('Please add a destination and both travel dates.');
+      return;
+    }
+    setError('');
+    window.clearTimeout(autosaveTimerRef.current);
+    await queueAutosave(currentDraft, saveFailedRef.current);
+    if (!saveFailedRef.current) onDone?.();
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isEditing) {
+      await handleDone();
+      return;
+    }
     if (!destination.trim() || !startDate || !endDate) {
       setError('Please add a destination and both travel dates.');
       return;
@@ -246,18 +405,7 @@ function TripFormContent({ trip = {}, onSave, onCancel, mapsEnabled = false }) {
       );
     }
 
-    onSave({
-      ...trip,
-      destination: destination.trim(),
-      startDate,
-      endDate,
-      itinerary: itinerary.map((day) => ({
-        date: day.date,
-        activities: [...day.activities],
-      })),
-      imageUrl: finalImageUrl,
-      user: { userId: user?.userId },
-    });
+    onSave({ ...currentDraft, imageUrl: finalImageUrl });
   };
 
   return (
@@ -375,7 +523,7 @@ function TripFormContent({ trip = {}, onSave, onCancel, mapsEnabled = false }) {
                           return (
                             <li
                               className={`${isFlexible ? 'is-flexible' : 'is-timed'}${isEditingActivity ? ' is-editing' : ''}`}
-                              key={`${activity.time}-${activity.name}-${activityIndex}`}
+                              key={activity.id}
                               draggable={isFlexible && !isEditingActivity}
                               onDragStart={(event) => {
                                 if (!isFlexible) return;
@@ -703,18 +851,27 @@ function TripFormContent({ trip = {}, onSave, onCancel, mapsEnabled = false }) {
       </div>
 
       <footer className="trip-form-actions">
-        <p>You can come back and refine your itinerary anytime.</p>
+        <p className={`trip-form-save-status is-${saveStatus}`} role={isEditing ? 'status' : undefined}>
+          {isEditing && saveStatus === 'saving' && 'Saving changesâ€¦'}
+          {isEditing && saveStatus === 'saved' && 'All changes saved'}
+          {isEditing && saveStatus === 'unsaved' && 'Changes safe on this device'}
+          {isEditing && saveStatus === 'error' && 'Could not sync. Changes are safe on this device.'}
+          {!isEditing && 'You can come back and refine your itinerary anytime.'}
+        </p>
         <div>
-          <button type="button" className="trip-form-cancel" onClick={onCancel}>
-            Cancel
-          </button>
+          {!isEditing && (
+            <button type="button" className="trip-form-cancel" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
           <button
-            type="submit"
+            type={isEditing ? 'button' : 'submit'}
             className="trip-form-save"
-            aria-label={isEditing ? 'Save changes' : 'Save trip'}
-            disabled={isPreparingImage}
+            aria-label={isEditing ? 'Done editing' : 'Save trip'}
+            disabled={isPreparingImage || (isEditing && saveStatus === 'saving')}
+            onClick={isEditing ? handleDone : undefined}
           >
-            <span>{isEditing ? 'Save changes' : 'Create trip'}</span>
+            <span>{isEditing ? 'Done' : 'Create trip'}</span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h13M13 6l6 6-6 6" />
             </svg>

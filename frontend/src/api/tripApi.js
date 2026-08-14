@@ -5,10 +5,9 @@ export const TRIP_API_ENDPOINT = (
   || 'https://f4ww6942k8.execute-api.us-east-1.amazonaws.com/'
 ).replace(/\/?$/, '/')
 
-const readErrorMessage = async (response) => {
+const readErrorPayload = async (response) => {
   try {
-    const payload = await response.json()
-    return payload?.message || (typeof payload === 'string' ? payload : null)
+    return await response.json()
   } catch {
     return null
   }
@@ -18,8 +17,15 @@ const request = async (path, options = {}) => {
   const response = await fetch(`${TRIP_API_ENDPOINT}${path.replace(/^\//, '')}`, options)
 
   if (!response.ok) {
-    const message = await readErrorMessage(response)
-    throw new Error(message || `Request failed (${response.status}).`)
+    const payload = await readErrorPayload(response)
+    const error = new Error(
+      payload?.message
+      || (typeof payload === 'string' ? payload : null)
+      || `Request failed (${response.status}).`,
+    )
+    error.status = response.status
+    error.data = payload
+    throw error
   }
 
   return response
