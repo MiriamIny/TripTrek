@@ -130,13 +130,13 @@ export default function TripShareDialog({ trip, onClose }) {
     try {
       setLoading(true)
       setError('')
-      setCollaborators(await getTripCollaborators(trip.id))
+      setCollaborators(await getTripCollaborators(trip.id, trip.ownerId))
     } catch (loadError) {
       setError(loadError.message || 'Unable to load collaborators.')
     } finally {
       setLoading(false)
     }
-  }, [getTripCollaborators, trip.id])
+  }, [getTripCollaborators, trip.id, trip.ownerId])
 
   useEffect(() => {
     loadCollaborators()
@@ -157,7 +157,7 @@ export default function TripShareDialog({ trip, onClose }) {
     setError('')
     setMessage('')
     try {
-      const result = await shareTrip(trip.id, email, permission, true, invitationMessage.trim())
+      const result = await shareTrip(trip.id, email, permission, true, invitationMessage.trim(), trip.ownerId)
       setEmail('')
       setInvitationMessage('')
       setMessage(result.invitationEmailSent
@@ -176,7 +176,7 @@ export default function TripShareDialog({ trip, onClose }) {
     setError('')
     setMessage('')
     try {
-      await shareTrip(trip.id, collaboratorEmail, nextPermission, false)
+      await shareTrip(trip.id, collaboratorEmail, nextPermission, false, '', trip.ownerId)
       setMessage(`Access updated to ${nextPermission === 'editor' ? 'Editor' : 'Viewer'}.`)
       await loadCollaborators()
     } catch (permissionError) {
@@ -192,7 +192,7 @@ export default function TripShareDialog({ trip, onClose }) {
     setError('')
     setMessage('')
     try {
-      await removeTripCollaborator(trip.id, collaboratorEmail)
+      await removeTripCollaborator(trip.id, collaboratorEmail, trip.ownerId)
       setMessage('Collaborator removed.')
       await loadCollaborators()
     } catch (removeError) {

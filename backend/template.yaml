@@ -51,14 +51,24 @@ Resources:
       CodeUri: auth-link/
       Timeout: 10
       MemorySize: 128
+      Environment:
+        Variables:
+          AUTH_TABLE_NAME: !Ref TripTrekTable
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
       Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TripTrekTable
         - Statement:
             - Effect: Allow
               Action:
                 - cognito-idp:ListUsers
                 - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminDeleteUser
                 - cognito-idp:AdminSetUserPassword
                 - cognito-idp:AdminLinkProviderForUser
+                - cognito-idp:AdminUpdateUserAttributes
+                - cognito-idp:DescribeUserPool
+                - cognito-idp:UpdateUserPool
               Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
 
   CognitoAccountLinkerPermission:
@@ -68,6 +78,60 @@ Resources:
       FunctionName: !Ref cognitoAccountLinker
       Principal: cognito-idp.amazonaws.com
       SourceArn: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+
+  CognitoAccountLinkerTrigger:
+    Type: Custom::CognitoPreSignUpTrigger
+    DependsOn: CognitoAccountLinkerPermission
+    Properties:
+      ServiceToken: !GetAtt cognitoAccountLinker.Arn
+      UserPoolId: !Ref CognitoUserPoolId
+      PreSignUpArn: !GetAtt cognitoAccountLinker.Arn
+
+  accountLookup:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: accountLookup
+      Handler: index.handler
+      Runtime: nodejs22.x
+      CodeUri: account-lookup/
+      Timeout: 10
+      MemorySize: 128
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          RATE_LIMIT_TABLE: !Ref ContactRateLimitTable
+          AUTH_TABLE_NAME: !Ref TripTrekTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ContactRateLimitTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TripTrekTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:ListUsers
+              Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+      Events:
+        Lookup:
+          Type: HttpApi
+          Properties:
+            Path: /accountLookup
+            Method: POST
+            ApiId: !Ref TripTrekAPI
+            Auth:
+              Authorizer: NONE
+        MarkPassword:
+          Type: HttpApi
+          Properties:
+            Path: /accountLookup
+            Method: PATCH
+            ApiId: !Ref TripTrekAPI
+        ConsumeMergeNotice:
+          Type: HttpApi
+          Properties:
+            Path: /accountLookup
+            Method: GET
+            ApiId: !Ref TripTrekAPI
 
   TripTrekTable:
     Type: AWS::DynamoDB::Table

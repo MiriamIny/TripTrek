@@ -20,7 +20,7 @@ export default function AuthNotice() {
       </span>
       <div>
         <strong>{authNotice.title}</strong>
-        <p>{authNotice.message}</p>
+        {authNotice.message && <p>{authNotice.message}</p>}
       </div>
       <button type="button" onClick={dismissAuthNotice} aria-label="Dismiss notification">×</button>
     </div>

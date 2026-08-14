@@ -98,4 +98,26 @@ describe('tripShares invitation email', () => {
     expect(result.statusCode).toBe(201)
     expect(JSON.parse(result.body).invitationEmailSent).toBe(false)
   })
+
+  it('lets a verified matching-email identity manage a trip under its legacy owner ID', async () => {
+    dbSend.mockReset()
+      .mockResolvedValueOnce({ Item: { ownerIds: ['current-sub', 'legacy-sub'] } })
+      .mockResolvedValueOnce({ Item: { pk: 'legacy-sub', sk: 'trip-1', destination: 'Lisbon' } })
+      .mockResolvedValueOnce({})
+    const { handler } = await import('./index.js')
+    const result = await handler({
+      ...event({
+        tripId: 'trip-1', ownerId: 'legacy-sub', email: 'friend@example.com', permission: 'viewer', sendEmail: false,
+      }),
+      requestContext: {
+        authorizer: { jwt: { claims: {
+          sub: 'current-sub', email: 'owner@example.com', email_verified: 'true',
+        } } },
+        http: { method: 'POST' },
+      },
+    })
+
+    expect(result.statusCode).toBe(201)
+    expect(dbSend.mock.calls[2][0].TransactItems[0].ConditionCheck.Key.pk).toBe('legacy-sub')
+  })
 })

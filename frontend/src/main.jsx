@@ -4,7 +4,6 @@ import App from './App.jsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '@aws-amplify/ui-react/styles.css';
 import './index.css';
-import './auth-styles.css'; 
 
 import { Amplify } from 'aws-amplify';
 import awsconfig from './aws-exports';

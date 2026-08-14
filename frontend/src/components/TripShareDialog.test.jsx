@@ -64,6 +64,7 @@ describe('TripShareDialog', () => {
       'viewer',
       true,
       'Can’t wait to plan this together!',
+      undefined,
     ))
   })
 
@@ -88,6 +89,8 @@ describe('TripShareDialog', () => {
       'friend@example.com',
       'editor',
       false,
+      '',
+      undefined,
     ))
   })
 })

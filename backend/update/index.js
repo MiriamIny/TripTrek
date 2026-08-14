@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
 
@@ -12,6 +13,20 @@ const headers = {
   'Access-Control-Allow-Methods': 'PATCH,OPTIONS',
 }
 const response = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) })
+const accountKey = (email) => `ACCOUNT#${createHash('sha256').update(email).digest('hex')}`
+
+const ownsId = async (claims, ownerId) => {
+  if (claims.sub === ownerId) return true
+  const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
+  const verified = claims.email_verified === true || claims.email_verified === 'true'
+  if (!email || !verified) return false
+  const result = await db.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: { pk: accountKey(email), sk: 'AUTH' },
+    ConsistentRead: true,
+  }))
+  return Array.isArray(result.Item?.ownerIds) && result.Item.ownerIds.includes(ownerId)
+}
 
 export const handler = async (event) => {
   const claims = event?.requestContext?.authorizer?.jwt?.claims || {}
@@ -41,7 +56,7 @@ export const handler = async (event) => {
   }
 
   try {
-    if (ownerId !== userId) {
+    if (!(await ownsId(claims, ownerId))) {
       const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
       if (!email) return response(403, { message: 'An email address is required for shared access.' })
       const invite = await db.send(new GetCommand({

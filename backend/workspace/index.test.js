@@ -57,4 +57,21 @@ describe('trip workspace handler', () => {
     expect(result.statusCode).toBe(403)
     expect(dbSend).toHaveBeenCalledTimes(2)
   })
+
+  it('treats a verified alias owner ID as the same owner', async () => {
+    dbSend
+      .mockResolvedValueOnce({ Item: { pk: 'legacy-owner', sk: 'trip-1' } })
+      .mockResolvedValueOnce({ Item: { ownerIds: ['current-owner', 'legacy-owner'] } })
+      .mockResolvedValueOnce({ Item: { notes: 'Shared identity notes' } })
+
+    const result = await handler({
+      ...event('GET', undefined, {
+        sub: 'current-owner', email: 'owner@example.com', email_verified: 'true',
+      }),
+      queryStringParameters: { tripId: 'trip-1', ownerId: 'legacy-owner' },
+    })
+
+    expect(result.statusCode).toBe(200)
+    expect(JSON.parse(result.body).notes).toBe('Shared identity notes')
+  })
 })

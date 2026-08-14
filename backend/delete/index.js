@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { BatchWriteCommand, DynamoDBDocumentClient, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 
@@ -9,6 +10,20 @@ const headers = {
   'Access-Control-Allow-Methods': 'DELETE,OPTIONS',
 }
 const response = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) })
+const accountKey = (email) => `ACCOUNT#${createHash('sha256').update(email).digest('hex')}`
+
+const ownsId = async (claims, ownerId) => {
+  if (claims.sub === ownerId) return true
+  const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
+  const verified = claims.email_verified === true || claims.email_verified === 'true'
+  if (!email || !verified) return false
+  const account = await db.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: { pk: accountKey(email), sk: 'AUTH' },
+    ConsistentRead: true,
+  }))
+  return Array.isArray(account.Item?.ownerIds) && account.Item.ownerIds.includes(ownerId)
+}
 
 const deleteKeys = async (keys) => {
   for (let index = 0; index < keys.length; index += 25) {
@@ -26,28 +41,30 @@ export const handler = async (event) => {
   const claims = event?.requestContext?.authorizer?.jwt?.claims || {}
   const userId = claims.sub
   const tripId = event?.queryStringParameters?.tripId
+  const ownerId = event?.queryStringParameters?.ownerId || userId
   if (!userId) return response(401, { message: 'Authentication is required.' })
   if (!tripId) return response(400, { message: 'A trip ID is required.' })
 
   try {
+    if (!(await ownsId(claims, ownerId))) return response(403, { message: 'Only the trip owner can delete this trip.' })
     const trip = await db.send(new GetCommand({
       TableName: TABLE_NAME,
-      Key: { pk: userId, sk: tripId },
+      Key: { pk: ownerId, sk: tripId },
     }))
     if (!trip.Item) return response(404, { message: 'Trip not found.' })
 
     const shareResult = await db.send(new QueryCommand({
       TableName: TABLE_NAME,
       KeyConditionExpression: 'pk = :trip',
-      ExpressionAttributeValues: { ':trip': `TRIP#${userId}#${tripId}` },
+      ExpressionAttributeValues: { ':trip': `TRIP#${ownerId}#${tripId}` },
     }))
     const shareRows = shareResult.Items || []
     const keys = [
-      { pk: userId, sk: tripId },
-      { pk: userId, sk: `WORKSPACE#${tripId}` },
+      { pk: ownerId, sk: tripId },
+      { pk: ownerId, sk: `WORKSPACE#${tripId}` },
       ...shareRows.flatMap((share) => [
         { pk: share.pk, sk: share.sk },
-        { pk: `INVITEE#${share.email}`, sk: `TRIP#${userId}#${tripId}` },
+        { pk: `INVITEE#${share.email}`, sk: `TRIP#${ownerId}#${tripId}` },
       ]),
     ]
     await deleteKeys(keys)

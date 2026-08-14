@@ -1,5 +1,6 @@
+import { createHash } from 'node:crypto'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { BatchGetCommand, DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb'
+import { BatchGetCommand, DynamoDBDocumentClient, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}))
 const TABLE_NAME = process.env.TABLE_NAME || 'TripTrek'
@@ -9,6 +10,20 @@ const headers = {
   'Access-Control-Allow-Methods': 'GET,OPTIONS',
 }
 const response = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) })
+const accountKey = (email) => `ACCOUNT#${createHash('sha256').update(email).digest('hex')}`
+
+const ownerIdsFor = async (claims) => {
+  const current = claims.sub
+  const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
+  const verified = claims.email_verified === true || claims.email_verified === 'true'
+  if (!email || !verified) return [current]
+  const result = await db.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: { pk: accountKey(email), sk: 'AUTH' },
+    ConsistentRead: true,
+  }))
+  return [...new Set([current, ...(Array.isArray(result.Item?.ownerIds) ? result.Item.ownerIds : [])].filter(Boolean))]
+}
 
 const batchGetTrips = async (keys) => {
   const trips = []
@@ -28,14 +43,15 @@ export const handler = async (event) => {
   if (!userId) return response(401, { message: 'Authentication is required.' })
 
   try {
-    const ownedResult = await db.send(new QueryCommand({
+    const ownerIds = await ownerIdsFor(claims)
+    const ownedResults = await Promise.all(ownerIds.map((ownerId) => db.send(new QueryCommand({
       TableName: TABLE_NAME,
       KeyConditionExpression: 'pk = :owner',
-      ExpressionAttributeValues: { ':owner': userId },
-    }))
-    const ownedTrips = (ownedResult.Items || [])
+      ExpressionAttributeValues: { ':owner': ownerId },
+    }))))
+    const ownedTrips = ownedResults.flatMap((ownedResult, index) => (ownedResult.Items || [])
       .filter((item) => !item.entityType || item.entityType === 'TRIP')
-      .map((trip) => ({ ...trip, ownerId: userId, access: 'owner' }))
+      .map((trip) => ({ ...trip, ownerId: ownerIds[index], access: 'owner' })))
 
     const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
     if (!email) return response(200, ownedTrips)
@@ -62,7 +78,9 @@ export const handler = async (event) => {
       }] : []
     })
 
-    return response(200, [...ownedTrips, ...shared])
+    const trips = new Map()
+    for (const trip of [...ownedTrips, ...shared]) trips.set(`${trip.ownerId}#${trip.sk}`, trip)
+    return response(200, [...trips.values()])
   } catch (error) {
     console.error('Error retrieving trips:', error)
     return response(500, { message: 'Unable to retrieve trips.' })
