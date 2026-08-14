@@ -123,16 +123,33 @@ The public contact endpoint validates and escapes input, uses a bot honeypot, an
 
 ### Cognito and Google account linking
 
-The `cognitoAccountLinker` Lambda links a first Google sign-in to one canonical native Cognito profile when Google supplies a verified email. The application records every verified matching-email Cognito `sub` as an owner alias, preserving trips, notes, packing lists, and sharing controls created under either historical identity without copying or deleting records. Google sign-in refreshes the preferred `name` and `picture`, and the merge notification is consumed once.
+The `cognitoAccountLinker` Lambda links a first Google sign-in to one canonical native Cognito profile when Google supplies a verified email. The application records every verified matching-email Cognito `sub` as an owner alias, preserving trips, notes, packing lists, and sharing controls created under either historical identity without copying records. Google sign-in refreshes the preferred `name` and `picture`, and the merge notification is consumed once.
 
-After deploying the SAM stack, attach the function in the Cognito console:
+Deploying the SAM stack automatically attaches `cognitoAccountLinker` as the user pool's **Pre sign-up** trigger. The deployment preserves the pool's existing configuration and its other Lambda triggers. Do not attach it with a partial `update-user-pool` CLI call because Cognito resets omitted user-pool settings to defaults.
 
-1. Open user pool `us-east-1_Ks6i9yln5` in `us-east-1`.
-2. Open **Extensions → Lambda triggers → Add a Lambda trigger**.
-3. Choose **Sign-up → Pre sign-up**.
-4. Select `cognitoAccountLinker`, then save.
+Accounts duplicated before this trigger was installed require one guarded repair. Preview the exact Cognito profiles and owner IDs first:
 
-Do not attach it with a partial `update-user-pool` CLI call. Cognito resets omitted user-pool settings to their defaults. Existing duplicate profiles are reconciled non-destructively by verified email when the user next signs in. Do not delete either Cognito profile or manually move DynamoDB records while testing reconciliation.
+```bash
+aws lambda invoke \
+  --function-name cognitoAccountLinker \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{"action":"repairDuplicateAccount","email":"person@example.com"}' \
+  repair-preview.json
+cat repair-preview.json
+```
+
+Only after confirming the preview lists exactly the intended native and `google_*` profiles, apply it:
+
+```bash
+aws lambda invoke \
+  --function-name cognitoAccountLinker \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{"action":"repairDuplicateAccount","email":"person@example.com","apply":true,"confirmation":"LINK_DUPLICATE_ACCOUNT","confirmEmail":"person@example.com"}' \
+  repair-result.json
+cat repair-result.json
+```
+
+The apply operation first preserves both historical `sub` values as trip-owner aliases. It then removes only the redundant `google_*` Cognito profile and links that Google identity to the native profile. Do not manually delete either profile before running the preview and repair.
 
 ## 📌 **Why Trek A Trip?**
 ### Because life is better when it's organized. Whether you're a meticulous planner or a spontaneous adventurer, **Trek A Trip** gives you the flexibility to build and adjust your itinerary on the fly.

@@ -269,6 +269,15 @@ export const handler = async (event) => {
 
     const providers = linkedProviders(users)
     const enabledPassword = providers.has('google') ? await passwordState(email) : null
+    const hasSeparateNativePasswordProfile = users.some((user) => (
+      isNativeProfile(user) && !isGoogleProfile(user)
+    ))
+    // A standalone native Cognito profile is definitive evidence that this email
+    // already has password sign-in. This also protects legacy duplicate records
+    // from being mistaken for a Google-only account because of a stale marker.
+    if (hasSeparateNativePasswordProfile) {
+      return response(200, { accountType: 'password' })
+    }
     // A missing marker means the profile predates this feature. Existing native
     // profiles historically had a password, so only an explicit false value is
     // treated as Google-only.

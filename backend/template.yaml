@@ -54,6 +54,7 @@ Resources:
       Environment:
         Variables:
           AUTH_TABLE_NAME: !Ref TripTrekTable
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TripTrekTable
@@ -62,9 +63,12 @@ Resources:
               Action:
                 - cognito-idp:ListUsers
                 - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminDeleteUser
                 - cognito-idp:AdminSetUserPassword
                 - cognito-idp:AdminLinkProviderForUser
                 - cognito-idp:AdminUpdateUserAttributes
+                - cognito-idp:DescribeUserPool
+                - cognito-idp:UpdateUserPool
               Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
 
   CognitoAccountLinkerPermission:
@@ -74,6 +78,14 @@ Resources:
       FunctionName: !Ref cognitoAccountLinker
       Principal: cognito-idp.amazonaws.com
       SourceArn: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+
+  CognitoAccountLinkerTrigger:
+    Type: Custom::CognitoPreSignUpTrigger
+    DependsOn: CognitoAccountLinkerPermission
+    Properties:
+      ServiceToken: !GetAtt cognitoAccountLinker.Arn
+      UserPoolId: !Ref CognitoUserPoolId
+      PreSignUpArn: !GetAtt cognitoAccountLinker.Arn
 
   accountLookup:
     Type: AWS::Serverless::Function

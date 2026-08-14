@@ -80,6 +80,27 @@ describe('accountLookup handler', () => {
     expect(JSON.parse(result.body)).toEqual({ accountType: 'password' })
   })
 
+  it('never treats separate native and Google profiles as Google-only', async () => {
+    cognitoSend.mockResolvedValue({
+      Users: [
+        user(),
+        {
+          ...user([{ providerName: 'Google', userId: 'google-sub' }]),
+          Username: 'google_google-sub',
+          UserStatus: 'EXTERNAL_PROVIDER',
+        },
+      ],
+    })
+    dynamoSend.mockImplementation((command) => (
+      command.kind === 'get'
+        ? Promise.resolve({ Item: { passwordEnabled: false } })
+        : Promise.resolve({})
+    ))
+    const { handler } = await import('./index.js')
+    const result = await handler(request('miriam@example.com'))
+    expect(JSON.parse(result.body)).toEqual({ accountType: 'password' })
+  })
+
   it('routes a linked profile created before password markers existed to normal sign-in', async () => {
     cognitoSend.mockResolvedValue({
       Users: [user([{ providerName: 'Google', userId: 'google-sub' }])],
