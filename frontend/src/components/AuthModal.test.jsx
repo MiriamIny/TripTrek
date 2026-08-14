@@ -2,7 +2,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
 import {
+  confirmSignUp,
   confirmResetPassword,
+  resendSignUpCode,
   resetPassword,
   signIn,
   signInWithRedirect,
@@ -35,7 +37,9 @@ vi.mock('@aws-amplify/ui-react', () => ({
 }));
 
 vi.mock('aws-amplify/auth', () => ({
+  confirmSignUp: vi.fn(),
   confirmResetPassword: vi.fn(),
+  resendSignUpCode: vi.fn(),
   resetPassword: vi.fn(),
   signIn: vi.fn(),
   signInWithRedirect: vi.fn(() => new Promise(() => {})),
@@ -80,6 +84,12 @@ describe('AuthModal', () => {
       json: vi.fn().mockResolvedValue({ accountType: 'password' }),
     });
     signIn.mockResolvedValue({ isSignedIn: true, nextStep: { signInStep: 'DONE' } });
+    signUp.mockResolvedValue({
+      isSignUpComplete: false,
+      nextStep: { signUpStep: 'CONFIRM_SIGN_UP' },
+    });
+    confirmSignUp.mockResolvedValue({ isSignUpComplete: true });
+    resendSignUpCode.mockResolvedValue({});
     tripApiFetch.mockResolvedValue({});
   });
 
@@ -158,8 +168,12 @@ describe('AuthModal', () => {
     expect(screen.getByRole('heading', { name: 'Sign in or create account' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Get started by creating an account' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
-    expect(screen.getByTestId('authenticator-signUp')).toBeInTheDocument();
-    expect(authenticatorNavigation.toSignUp).toHaveBeenCalled();
+    expect(screen.getByLabelText('Name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email address')).toHaveValue('miriam@example.com');
+    expect(screen.getByLabelText('Email address')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirm password')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/username/i)).not.toBeInTheDocument();
     const requirementsButton = await screen.findByRole('button', {
       name: 'View password requirements',
     });
@@ -167,33 +181,11 @@ describe('AuthModal', () => {
       'aria-describedby',
       'password-requirements-tooltip',
     );
-    expect(Authenticator).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        initialState: 'signUp',
-        formFields: expect.objectContaining({
-          signUp: expect.objectContaining({
-            name: expect.objectContaining({
-              label: 'Name',
-              isRequired: true,
-            }),
-            email: expect.objectContaining({
-              defaultValue: 'miriam@example.com',
-              isReadOnly: true,
-            }),
-            password: expect.objectContaining({
-              label: 'Password',
-              isRequired: true,
-            }),
-            confirm_password: expect.objectContaining({
-              label: 'Confirm password',
-              isRequired: true,
-            }),
-          }),
-        }),
-        signUpAttributes: ['name'],
-      }),
-      undefined,
-    );
+    fireEvent.mouseEnter(requirementsButton.closest('.password-requirements'));
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip').parentElement).toHaveClass('auth-sign-up-stage');
+    });
+    expect(screen.queryByText(/passwords match/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('heading', { name: 'Sign in or create account' })).toBeInTheDocument();
@@ -259,21 +251,25 @@ describe('AuthModal', () => {
     render(<AuthModal />);
     await openSignUpForUnknownEmail();
 
-    const services = Authenticator.mock.calls.at(-1)[0].services;
     const error = new Error('User already exists');
     error.name = 'UsernameExistsException';
     signUp.mockRejectedValueOnce(error);
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Miriam Iny' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password1!' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Password1!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
 
-    await expect(services.handleSignUp({ username: 'miriam@example.com' })).rejects.toThrow(
-      /Go back and continue with that email/,
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Go back and continue with that email/);
   });
 
-  it('checks the newly typed email after returning from account creation', async () => {
+  it('prefills the newly checked email after returning from account creation', async () => {
     render(<AuthModal />);
     await openSignUpForUnknownEmail();
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
+    publicTripApiFetch.mockResolvedValueOnce({
+      json: vi.fn().mockResolvedValue({ accountType: 'none' }),
+    });
     fireEvent.change(screen.getByRole('textbox', { name: 'Email address' }), {
       target: { value: 'different@example.com' },
     });
@@ -283,10 +279,78 @@ describe('AuthModal', () => {
       'accountLookup',
       expect.objectContaining({ body: JSON.stringify({ email: 'different@example.com' }) }),
     ));
-    expect(await screen.findByLabelText('Password')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Get started by creating an account' })).not.toBeInTheDocument();
-    expect(authenticatorNavigation.toSignIn).toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { name: 'Get started by creating an account' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Email address')).toHaveValue('different@example.com');
+    expect(screen.getByLabelText('Email address')).not.toHaveValue('miriam@example.com');
+  });
+
+  it('shows only password errors after blur and removes them while the user fixes the field', async () => {
+    render(<AuthModal />);
+    await openSignUpForUnknownEmail();
+
+    const password = screen.getByLabelText('Password');
+    const confirmation = screen.getByLabelText('Confirm password');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    fireEvent.change(password, { target: { value: 'short' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.blur(password);
+    expect(screen.getByRole('alert')).toHaveTextContent(/Password needs/);
+
+    fireEvent.focus(password);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.change(password, { target: { value: 'Password1!' } });
+    fireEvent.blur(password);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/passwords match/i)).not.toBeInTheDocument();
+
+    fireEvent.change(confirmation, { target: { value: 'Different1!' } });
+    fireEvent.blur(confirmation);
+    expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match.');
+    fireEvent.focus(confirmation);
+    fireEvent.change(confirmation, { target: { value: 'Password1!' } });
+    fireEvent.blur(confirmation);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/passwords match/i)).not.toBeInTheDocument();
+  });
+
+  it('creates and confirms the exact checked email with name and password', async () => {
+    render(<AuthModal />);
+    await openSignUpForUnknownEmail();
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Miriam Iny' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password1!' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Password1!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
+
+    await waitFor(() => expect(signUp).toHaveBeenCalledWith({
+      username: 'miriam@example.com',
+      password: 'Password1!',
+      options: {
+        userAttributes: {
+          email: 'miriam@example.com',
+          name: 'Miriam Iny',
+        },
+      },
+    }));
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Verification code'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify email' }));
+
+    await waitFor(() => expect(confirmSignUp).toHaveBeenCalledWith({
+      username: 'miriam@example.com',
+      confirmationCode: '123456',
+    }));
+    expect(signIn).toHaveBeenCalledWith({
+      username: 'miriam@example.com',
+      password: 'Password1!',
+    });
+    expect(authContextState.closeAuth).toHaveBeenCalled();
+    expect(JSON.parse(window.sessionStorage.getItem('trek-a-trip:new-account-welcome'))).toEqual({
+      email: 'miriam@example.com',
+      name: 'Miriam Iny',
+    });
   });
 
   it('always reopens on a clear first-choice screen', async () => {

@@ -125,7 +125,7 @@
 }
 
 .password-requirements-tooltip {
-  position: fixed;
+  position: absolute;
   z-index: 2000;
   padding: 0.85rem 1rem;
   color: #fff;
@@ -156,8 +156,8 @@
   top: auto;
   right: auto;
   bottom: 100%;
-  left: 10px;
-  transform: none;
+  left: 50%;
+  transform: translateX(-50%);
   border-right-color: transparent;
   border-bottom-color: #263238;
 }
@@ -165,8 +165,8 @@
 .password-requirements-tooltip[data-placement='top']::before {
   top: 100%;
   right: auto;
-  left: 10px;
-  transform: none;
+  left: 50%;
+  transform: translateX(-50%);
   border-right-color: transparent;
   border-top-color: #263238;
 }
@@ -399,6 +399,26 @@
   padding-right: 3.1rem;
 }
 
+.auth-floating-password-field--with-requirements input {
+  padding-right: 5.4rem;
+}
+
+.auth-password-requirements-control {
+  position: absolute;
+  top: 0;
+  right: 46px;
+  z-index: 4;
+  width: 38px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.auth-password-requirements-control .password-requirements {
+  display: grid;
+  place-items: center;
+}
+
 .auth-floating-field input[readonly] {
   color: #526169;
   background: #f4f7f5;
@@ -460,6 +480,26 @@
   display: grid;
   gap: 0.45rem;
   margin: 0;
+}
+
+.auth-create-account-form {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  text-align: left;
+}
+
+.auth-create-account-form .auth-email-button {
+  margin-top: 0.1rem !important;
+}
+
+.auth-resend-code {
+  justify-self: center;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
 }
 
 .auth-inline-password-form .auth-choice-button {
