@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Authenticator } from '@aws-amplify/ui-react';
+import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
 import {
   confirmResetPassword,
   resetPassword,
@@ -10,6 +10,17 @@ import {
 } from 'aws-amplify/auth';
 import { publicTripApiFetch, tripApiFetch } from '../api/tripApi';
 import AuthModal from './AuthModal';
+
+const authContextState = vi.hoisted(() => ({
+  isAuthModalOpen: true,
+  closeAuth: vi.fn(),
+}));
+
+const authenticatorNavigation = vi.hoisted(() => ({
+  toSignIn: vi.fn(),
+  toSignUp: vi.fn(),
+  toForgotPassword: vi.fn(),
+}));
 
 vi.mock('@aws-amplify/ui-react', () => ({
   Authenticator: vi.fn(({ initialState }) => (
@@ -37,10 +48,7 @@ vi.mock('../api/tripApi', () => ({
 }));
 
 vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({
-    isAuthModalOpen: true,
-    closeAuth: vi.fn(),
-  }),
+  useAuth: () => authContextState,
 }));
 
 vi.mock('../assets/TrekATripLogo.png', () => ({
@@ -65,6 +73,9 @@ const openSignUpForUnknownEmail = async () => {
 describe('AuthModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authContextState.isAuthModalOpen = true;
+    authContextState.closeAuth = vi.fn();
+    useAuthenticator.mockReturnValue(authenticatorNavigation);
     publicTripApiFetch.mockResolvedValue({
       json: vi.fn().mockResolvedValue({ accountType: 'password' }),
     });
@@ -92,24 +103,40 @@ describe('AuthModal', () => {
 
     expect(screen.getByRole('heading', { name: 'Sign in or create account' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
-    expect(await screen.findByTestId('authenticator-signIn')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
     expect(publicTripApiFetch).toHaveBeenCalledWith('accountLookup', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ email: 'miriam@example.com' }),
     }));
     expect(screen.queryByRole('button', { name: 'Continue with email' })).not.toBeInTheDocument();
-    expect(Authenticator).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        initialState: 'signIn',
-        loginMechanisms: ['email'],
-        formFields: expect.objectContaining({
-          signIn: expect.objectContaining({
-            username: expect.objectContaining({ defaultValue: 'miriam@example.com' }),
-          }),
-        }),
-      }),
-      undefined,
-    );
+    expect(authenticatorNavigation.toSignIn).toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password1!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
+    await waitFor(() => expect(signIn).toHaveBeenCalledWith({
+      username: 'miriam@example.com',
+      password: 'Password1!',
+    }));
+    expect(authContextState.closeAuth).toHaveBeenCalled();
+  });
+
+  it('always releases the sign-in loading state when Cognito rejects the password', async () => {
+    const error = new Error('Incorrect username or password.');
+    error.name = 'NotAuthorizedException';
+    signIn.mockRejectedValueOnce(error);
+    render(<AuthModal />);
+    enterEmail();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }));
+
+    fireEvent.change(await screen.findByLabelText('Password'), {
+      target: { value: 'WrongPassword1!' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect email or password');
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Signing in...' })).not.toBeInTheDocument();
   });
 
   it('starts the Google redirect with account selection', async () => {
@@ -132,6 +159,7 @@ describe('AuthModal', () => {
     expect(screen.getByRole('heading', { name: 'Get started by creating an account' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
     expect(screen.getByTestId('authenticator-signUp')).toBeInTheDocument();
+    expect(authenticatorNavigation.toSignUp).toHaveBeenCalled();
     const requirementsButton = await screen.findByRole('button', {
       name: 'View password requirements',
     });
@@ -157,7 +185,7 @@ describe('AuthModal', () => {
               isRequired: true,
             }),
             confirm_password: expect.objectContaining({
-              label: 'Reenter password',
+              label: 'Confirm password',
               isRequired: true,
             }),
           }),
@@ -170,6 +198,7 @@ describe('AuthModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('heading', { name: 'Sign in or create account' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with email' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Email address' })).toHaveValue('');
   });
 
   it('advances a definitive unknown email response to account creation', async () => {
@@ -197,9 +226,21 @@ describe('AuthModal', () => {
       name: 'Verify your email to add a password',
     })).toBeInTheDocument();
     expect(resetPassword).toHaveBeenCalledWith({ username: 'miriam@example.com' });
+    const passwordInput = screen.getByLabelText('Password');
+    const confirmPasswordInput = screen.getByLabelText('Confirm password');
+    expect(passwordInput).toHaveAttribute('placeholder', ' ');
+    expect(confirmPasswordInput).toHaveAttribute('placeholder', ' ');
+    expect(passwordInput).toHaveAttribute('type', 'password');
+    expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Password hidden. Reveal password' }));
+    expect(passwordInput).toHaveAttribute('type', 'text');
+    expect(screen.getByRole('button', { name: 'Password revealed. Hide password' })).toBeInTheDocument();
+    expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+
     fireEvent.change(screen.getByLabelText('Verification code'), { target: { value: '123456' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'NewPassword1!' } });
-    fireEvent.change(screen.getByLabelText('Reenter password'), { target: { value: 'NewPassword1!' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'NewPassword1!' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add password' }));
 
     await waitFor(() => expect(confirmResetPassword).toHaveBeenCalledWith({
@@ -242,5 +283,24 @@ describe('AuthModal', () => {
       'accountLookup',
       expect.objectContaining({ body: JSON.stringify({ email: 'different@example.com' }) }),
     ));
+    expect(await screen.findByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Get started by creating an account' })).not.toBeInTheDocument();
+    expect(authenticatorNavigation.toSignIn).toHaveBeenCalled();
+  });
+
+  it('always reopens on a clear first-choice screen', async () => {
+    const { rerender } = render(<AuthModal />);
+    await openSignUpForUnknownEmail();
+
+    authContextState.isAuthModalOpen = false;
+    rerender(<AuthModal />);
+    authContextState.isAuthModalOpen = true;
+    rerender(<AuthModal />);
+
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue with email' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Email address' })).toHaveValue('');
+    expect(screen.queryByRole('heading', { name: 'Get started by creating an account' })).not.toBeInTheDocument();
   });
 });

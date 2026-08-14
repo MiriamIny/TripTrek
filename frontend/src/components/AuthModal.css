@@ -1,3 +1,13 @@
+.auth-modal {
+  --auth-card-max-width: 420px;
+  --auth-card-padding: 1.25rem;
+  --auth-card-radius: 16px;
+  --auth-control-height: 46px;
+  --auth-control-radius: 10px;
+  --auth-green: #2e7d32;
+  --auth-green-hover: #256628;
+}
+
 .auth-modal .modal-dialog {
   max-width: 520px;
 }
@@ -177,15 +187,17 @@
   transform: translate(0);
 }
 
-.auth-choice {
+.auth-choice,
+.auth-sign-up-stage {
+  box-sizing: border-box;
   width: calc(100% - 2rem);
-  max-width: 420px;
+  max-width: var(--auth-card-max-width);
   margin: 0.75rem auto;
-  padding: 1.25rem;
+  padding: var(--auth-card-padding);
   text-align: center;
   background: #fff;
-  border: 1px solid rgba(55, 71, 79, 0.08);
-  border-radius: 16px;
+  border: 0;
+  border-radius: var(--auth-card-radius);
   box-shadow: 0 8px 28px rgba(38, 50, 56, 0.1);
 }
 
@@ -250,18 +262,22 @@
   font-weight: 650;
 }
 
-.auth-choice-button {
+.auth-choice-button,
+.auth-modal [data-amplify-form] .amplify-button--primary {
   box-sizing: border-box;
   appearance: none;
-  width: 100%;
-  height: 46px;
+  width: 100% !important;
+  min-width: 0;
+  max-width: none !important;
+  height: var(--auth-control-height);
+  min-height: var(--auth-control-height);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.7rem;
-  margin: 0;
+  margin: 0 !important;
   padding: 0 1rem;
-  border-radius: 7px;
+  border-radius: 7px !important;
   font: inherit;
   font-size: 0.95rem;
   font-weight: 600;
@@ -298,18 +314,23 @@
   display: block;
 }
 
-.auth-email-button {
+.auth-email-button,
+.auth-modal [data-amplify-form] .amplify-button--primary {
   color: #fff;
-  background: #2e7d32;
-  border: 1px solid #2e7d32;
+  background: var(--auth-green) !important;
+  border: 1px solid var(--auth-green) !important;
 }
 
-.auth-email-button:hover {
-  background: #256628;
-  border-color: #256628;
+.auth-email-button:hover,
+.auth-modal [data-amplify-form] .amplify-button--primary:hover:not(:disabled) {
+  background: var(--auth-green-hover) !important;
+  border-color: var(--auth-green-hover) !important;
+  box-shadow: none;
+  transform: none;
 }
 
-.auth-email-button:disabled {
+.auth-email-button:disabled,
+.auth-modal [data-amplify-form] .amplify-button--primary:disabled {
   opacity: 0.7;
   cursor: wait;
 }
@@ -323,14 +344,30 @@
 
 .auth-floating-field {
   position: relative;
+  box-sizing: border-box;
   width: 100%;
+  height: var(--auth-control-height);
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #c8d1ce;
+  border-radius: var(--auth-control-radius);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.auth-floating-field:focus-within {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.14);
+}
+
+.auth-floating-field:has(input[aria-invalid='true']) {
+  border-color: #b3261e;
 }
 
 .auth-floating-field label {
   position: absolute;
   top: 50%;
   left: 0.85rem;
-  z-index: 1;
+  z-index: 2;
   margin: 0;
   color: #37474f;
   font-size: 1rem;
@@ -342,28 +379,58 @@
   transition: top 140ms ease, color 140ms ease, font-size 140ms ease, transform 140ms ease;
 }
 
-.auth-email-choice input {
+.auth-floating-field input {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  height: 46px;
+  height: 100%;
   padding: 1rem 0.85rem 0.25rem;
   color: #263238;
-  background: #fff;
-  border: 1px solid #c8d1ce;
-  border-radius: 9px;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  outline: 0;
+  box-shadow: none;
   font: inherit;
   text-align: left;
 }
 
-.auth-email-choice input:focus {
-  border-color: #2e7d32;
-  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.14);
-  outline: 0;
+.auth-floating-field--with-end input {
+  padding-right: 3.1rem;
 }
 
-.auth-email-choice input[aria-invalid='true'] {
-  border-color: #b3261e;
+.auth-floating-field input[readonly] {
+  color: #526169;
+  background: #f4f7f5;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  width: 46px;
+  height: 100%;
+  display: grid;
+  padding: 0;
+  color: #526169;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  cursor: pointer;
+  place-items: center;
+}
+
+.auth-password-toggle:hover,
+.auth-password-toggle:focus-visible {
+  color: #2e7d32;
+  background: transparent;
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid rgba(46, 125, 50, 0.35);
+  outline-offset: -4px;
 }
 
 .auth-email-choice .auth-email-button {
@@ -384,6 +451,25 @@
   width: 100%;
   min-width: 0;
   margin-top: 0.45rem;
+}
+
+.auth-inline-password-form {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.auth-inline-password-form .auth-choice-button {
+  margin-top: 0.1rem !important;
+}
+
+.auth-forgot-password {
+  justify-self: center;
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
 }
 
 .auth-modal .auth-inline-sign-in .amplify-authenticator {
@@ -450,7 +536,17 @@
   position: relative;
   display: block !important;
   width: 100% !important;
+  max-width: none !important;
   margin-bottom: 0.4rem;
+}
+
+.auth-modal .auth-inline-sign-in [data-amplify-form] .amplify-field,
+.auth-modal .auth-inline-sign-in [data-amplify-form] .amplify-passwordfield,
+.auth-modal .auth-inline-sign-in [data-amplify-form] .amplify-button--primary {
+  width: 100% !important;
+  max-width: none !important;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
 }
 
 .auth-modal .auth-inline-sign-in .auth-inline-password-field > .amplify-label,
@@ -816,13 +912,6 @@
   border: 0 !important;
 }
 
-.auth-modal [data-amplify-form] .amplify-button--primary {
-  min-height: 44px;
-  margin-top: 0.1rem;
-  padding: 0.65rem 1rem;
-  border-radius: 8px;
-}
-
 .auth-modal .auth-stage-heading {
   margin: 0.15rem 1rem 0;
   color: #263238;
@@ -847,24 +936,47 @@
 
 .auth-sign-up-stage {
   position: relative;
-  box-sizing: border-box;
-  width: calc(100% - 2rem);
-  max-width: 420px;
-  margin: 0.75rem auto;
-  padding: 0.35rem 0 0;
 }
 
 .auth-modal .auth-sign-up-stage .amplify-authenticator {
   width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
   padding: 0 !important;
   background: transparent;
 }
 
+.auth-modal .auth-sign-up-stage .amplify-authenticator > div,
+.auth-modal .auth-sign-up-stage .amplify-authenticator__column {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 0 !important;
+}
+
 .auth-modal .auth-sign-up-stage .amplify-card,
 .auth-modal .auth-sign-up-stage [data-amplify-container],
-.auth-modal .auth-sign-up-stage [data-amplify-router] {
+.auth-modal .auth-sign-up-stage [data-amplify-router],
+.auth-modal .auth-sign-up-stage [data-amplify-router-content],
+.auth-modal .auth-sign-up-stage .amplify-tabs,
+.auth-modal .auth-sign-up-stage .amplify-tabs__panel {
   width: 100% !important;
   max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.auth-modal .auth-sign-up-stage [data-amplify-container],
+.auth-modal .auth-sign-up-stage [data-amplify-router],
+.auth-modal .auth-sign-up-stage [data-amplify-router-content],
+.auth-modal .auth-sign-up-stage .amplify-tabs,
+.auth-modal .auth-sign-up-stage .amplify-tabs__panel--active {
+  display: block !important;
+  place-self: stretch !important;
 }
 
 .auth-modal .auth-sign-up-stage .amplify-card {
@@ -872,8 +984,36 @@
 }
 
 .auth-modal .auth-sign-up-stage [data-amplify-form] {
-  padding-right: 1.25rem !important;
-  padding-left: 1.25rem !important;
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  align-items: stretch !important;
+}
+
+.auth-modal .auth-sign-up-stage [data-amplify-form] > .amplify-flex,
+.auth-modal .auth-sign-up-stage [data-amplify-form] > .amplify-flex > .amplify-flex,
+.auth-modal .auth-sign-up-stage [data-amplify-form] fieldset,
+.auth-modal .auth-sign-up-stage [data-amplify-form] fieldset > .amplify-flex {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: none !important;
+  align-self: stretch !important;
+  align-items: stretch !important;
+}
+
+.auth-modal .auth-sign-up-stage [data-amplify-form] .amplify-field,
+.auth-modal .auth-sign-up-stage [data-amplify-form] .amplify-passwordfield,
+.auth-modal .auth-sign-up-stage [data-amplify-form] .amplify-field-group,
+.auth-modal .auth-sign-up-stage [data-amplify-form] .amplify-field-group__field-wrapper,
+.auth-modal .auth-sign-up-stage [data-amplify-form] .amplify-button--primary {
+  box-sizing: border-box;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
 }
 
 .auth-sign-up-logo {
@@ -901,6 +1041,63 @@
   cursor: default;
 }
 
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field {
+  position: relative;
+  display: block !important;
+  width: 100% !important;
+  margin-bottom: 0.45rem;
+}
+
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field > .amplify-label,
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field > .amplify-field__label {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  z-index: 3;
+  width: auto;
+  margin: 0;
+  color: #37474f;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: top 140ms ease, color 140ms ease, font-size 140ms ease, transform 140ms ease;
+}
+
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field:focus-within > .amplify-label,
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field:focus-within > .amplify-field__label,
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field:has(input:not(:placeholder-shown)) > .amplify-label,
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field:has(input:not(:placeholder-shown)) > .amplify-field__label {
+  top: 0.42rem;
+  color: #2e7d32;
+  font-size: 0.67rem;
+  font-weight: 650;
+  transform: none;
+}
+
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field .amplify-input {
+  min-height: 46px;
+  padding-top: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field:has(> .password-requirements-host) .amplify-input {
+  padding-right: 3rem;
+}
+
+.auth-modal .auth-sign-up-stage .auth-floating-amplify-field > .password-requirements-host {
+  position: absolute;
+  top: 0;
+  right: 46px;
+  left: auto;
+  z-index: 5;
+  width: 38px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+}
+
 .auth-google-account-copy {
   max-width: 390px;
   margin: 0 auto 0.8rem;
@@ -914,46 +1111,15 @@
 .auth-google-password-form {
   box-sizing: border-box;
   width: 100%;
-  max-width: 420px;
+  max-width: none;
   display: grid;
-  gap: 0.3rem;
-  margin: 0 auto 0.75rem;
-  padding: 0.85rem 1.25rem 1rem;
-  background: #fff;
-  border: 1px solid rgba(55, 71, 79, 0.08);
-  border-radius: 16px;
-  box-shadow: 0 8px 28px rgba(38, 50, 56, 0.1);
-}
-
-.auth-google-password-form label {
-  margin-top: 0.25rem;
-  color: #37474f;
-  font-size: 0.85rem;
-  font-weight: 650;
-}
-
-.auth-google-password-form input {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  height: 44px;
-  padding: 0.55rem 0.8rem;
-  color: #263238;
-  background: #fff;
-  border: 1px solid #c8d1ce;
-  border-radius: 10px;
-  font: inherit;
-}
-
-.auth-google-password-form input[readonly] {
-  color: #526169;
-  background: #f4f7f5;
-}
-
-.auth-google-password-form input:focus {
-  border-color: #2e7d32;
-  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.14);
-  outline: 0;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .auth-google-password-form .auth-email-button {
@@ -1000,7 +1166,8 @@
     margin: 0.5rem;
   }
 
-  .auth-choice {
+  .auth-choice,
+  .auth-sign-up-stage {
     width: calc(100% - 1rem);
     margin: 0.35rem auto;
     padding: 1rem;
@@ -1010,22 +1177,22 @@
     padding: 0.25rem;
   }
 
-  .auth-email-stage {
+  .auth-email-stage:not(.auth-sign-up-stage) {
     width: calc(100% - 1rem);
     padding: 0.15rem;
   }
 
   .auth-modal .auth-sign-up-stage [data-amplify-form] {
-    padding-right: 1rem !important;
-    padding-left: 1rem !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
   }
 
   .auth-google-password-form {
-    padding-right: 1rem;
-    padding-left: 1rem;
+    padding-right: 0;
+    padding-left: 0;
   }
 
-  .auth-modal [data-amplify-form] {
+  .auth-modal .auth-email-stage:not(.auth-sign-up-stage) [data-amplify-form] {
     padding: 0.75rem !important;
   }
 

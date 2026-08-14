@@ -335,7 +335,7 @@
 @keyframes trip-workspace-open { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
 @keyframes trip-workspace-spin { to { transform: rotate(360deg); } }
 
-@media (min-width: 561px) and (max-width: 900px) {
+@media (min-width: 401px) {
   .trip-workspace {
     right: 1.25rem;
     bottom: 5.9rem;
@@ -367,7 +367,7 @@
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 400px) {
   .trip-workspace { right: auto; bottom: 0.75rem; left: 0.75rem; }
   .trip-workspace-panel { bottom: 64px; width: calc(100vw - 1.5rem); max-height: calc(100dvh - 155px); border-radius: 20px; }
   .trip-workspace-body { min-height: 190px; }

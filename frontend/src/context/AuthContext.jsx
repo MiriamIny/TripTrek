@@ -1,15 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { fetchAuthSession, fetchUserAttributes } from 'aws-amplify/auth';
+import {
+  fetchAuthSession,
+  fetchUserAttributes,
+  getCurrentUser,
+  signOut as cognitoSignOut,
+} from 'aws-amplify/auth';
 import { tripApiFetch } from '../api/tripApi';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const { user, signOut: amplifySignOut, authStatus } = useAuthenticator((context) => [
+  const { user: providerUser, signOut: amplifySignOut, authStatus } = useAuthenticator((context) => [
     context.user,
     context.authStatus,
   ]);
+  const [currentUser, setCurrentUser] = useState(providerUser || null);
+  const [locallySignedOut, setLocallySignedOut] = useState(false);
+  const user = locallySignedOut ? null : (currentUser || providerUser || null);
   const [userAttributes, setUserAttributes] = useState(user?.attributes || {});
   const [linkedProfile, setLinkedProfile] = useState({});
   const [accountReady, setAccountReady] = useState(false);
@@ -19,12 +27,40 @@ export const AuthProvider = ({ children }) => {
   const [mergeNoticeChecked, setMergeNoticeChecked] = useState(false);
   const welcomePendingRef = useRef(false);
   const wasAuthenticatedRef = useRef(false);
-  const isAuthenticated = authStatus === 'authenticated';
+  const providerIsAuthenticated = authStatus === 'authenticated';
+  const isAuthenticated = providerIsAuthenticated && !locallySignedOut;
+
+  useEffect(() => {
+    if (!providerIsAuthenticated) setLocallySignedOut(false);
+  }, [providerIsAuthenticated]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    if (!isAuthenticated) {
+      setCurrentUser(null);
+      return () => { isCurrent = false; };
+    }
+
+    if (providerUser) {
+      setCurrentUser(providerUser);
+      return () => { isCurrent = false; };
+    }
+
+    getCurrentUser()
+      .then((authenticatedUser) => {
+        if (isCurrent) setCurrentUser(authenticatedUser);
+      })
+      .catch((error) => {
+        console.warn('Unable to resolve the authenticated Cognito user:', error);
+      });
+
+    return () => { isCurrent = false; };
+  }, [isAuthenticated, providerUser]);
 
   useEffect(() => {
     let isCurrent = true;
 
-    if (!user) {
+    if (!isAuthenticated) {
       setUserAttributes({});
       return () => {
         isCurrent = false;
@@ -36,7 +72,7 @@ export const AuthProvider = ({ children }) => {
         fetchAuthSession(),
         fetchUserAttributes(),
       ]);
-      let attributes = { ...(user.attributes || {}) };
+      let attributes = { ...(user?.attributes || {}) };
 
       if (sessionResult.status === 'fulfilled') {
         const claims = sessionResult.value.tokens?.idToken?.payload || {};
@@ -62,7 +98,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       isCurrent = false;
     };
-  }, [user?.userId]);
+  }, [isAuthenticated, user?.attributes, user?.userId]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -154,8 +190,38 @@ export const AuthProvider = ({ children }) => {
   }, [isAuthenticated, linkedProfile, mergeNotice, mergeNoticeChecked, user, userAttributes]);
 
   const signOut = async () => {
-    await amplifySignOut();
+    setLocallySignedOut(true);
+    setCurrentUser(null);
     setUserAttributes({});
+    setLinkedProfile({});
+    setAccountReady(false);
+    setAuthNotice(null);
+    setMergeNotice(null);
+    setMergeNoticeChecked(false);
+
+    let cognitoError;
+    let providerError;
+    let didSignOut = false;
+    try {
+      await cognitoSignOut();
+      didSignOut = true;
+    } catch (error) {
+      cognitoError = error;
+      console.warn('Unable to clear the Cognito session directly:', error);
+    }
+
+    try {
+      await amplifySignOut();
+      didSignOut = true;
+    } catch (error) {
+      providerError = error;
+      console.warn('Unable to synchronize Amplify UI sign-out state:', error);
+    }
+
+    if (!didSignOut) {
+      setLocallySignedOut(false);
+      throw cognitoError || providerError || new Error('Unable to sign out.');
+    }
   };
 
   const dismissAuthNotice = useCallback(() => setAuthNotice(null), []);

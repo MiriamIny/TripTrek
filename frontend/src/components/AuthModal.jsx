@@ -19,13 +19,13 @@ const getFormFields = (email = '') => ({
     name: {
       order: 1,
       label: 'Name',
-      placeholder: 'Name',
+      placeholder: ' ',
       isRequired: true,
     },
     email: {
       order: 2,
       label: 'Email',
-      placeholder: 'Email',
+      placeholder: ' ',
       defaultValue: email,
       isReadOnly: true,
       isRequired: true,
@@ -33,7 +33,7 @@ const getFormFields = (email = '') => ({
     password: {
       order: 3,
       label: 'Password',
-      placeholder: 'Password',
+      placeholder: ' ',
       showPasswordButtonLabel: 'Toggle password visibility',
       passwordIsHiddenLabel: 'Password hidden',
       passwordIsShownLabel: 'Password revealed',
@@ -41,8 +41,8 @@ const getFormFields = (email = '') => ({
     },
     confirm_password: {
       order: 4,
-      label: 'Reenter password',
-      placeholder: 'Reenter password',
+      label: 'Confirm password',
+      placeholder: ' ',
       showPasswordButtonLabel: 'Toggle password visibility',
       passwordIsHiddenLabel: 'Password hidden',
       passwordIsShownLabel: 'Password revealed',
@@ -66,20 +66,20 @@ const getFormFields = (email = '') => ({
   confirmSignUp: {
     confirmation_code: {
       label: 'Verification code',
-      placeholder: 'Enter verification code',
+      placeholder: ' ',
     },
   },
   forgotPassword: {
     username: {
       label: 'Email',
-      placeholder: 'Email',
+      placeholder: ' ',
       defaultValue: email,
     },
   },
   confirmResetPassword: {
     confirmation_code: {
       label: 'Verification code',
-      placeholder: 'Enter verification code',
+      placeholder: ' ',
     },
   },
 });
@@ -148,6 +148,54 @@ function EyeClosedIcon() {
   );
 }
 
+function AuthFloatingField({
+  id,
+  label,
+  className = '',
+  endAdornment = null,
+  ...inputProps
+}) {
+  return (
+    <div className={`auth-floating-field${endAdornment ? ' auth-floating-field--with-end' : ''}${className ? ` ${className}` : ''}`}>
+      <input id={id} placeholder=" " {...inputProps} />
+      <label htmlFor={id}>{label}</label>
+      {endAdornment}
+    </div>
+  );
+}
+
+function AuthPasswordField({ id, label, value, onChange, autoComplete = 'new-password' }) {
+  const [isRevealed, setIsRevealed] = useState(false);
+  const accessibilityLabel = isRevealed
+    ? `${label} revealed. Hide ${label.toLowerCase()}`
+    : `${label} hidden. Reveal ${label.toLowerCase()}`;
+
+  return (
+    <AuthFloatingField
+      id={id}
+      label={label}
+      className="auth-floating-password-field"
+      type={isRevealed ? 'text' : 'password'}
+      autoComplete={autoComplete}
+      value={value}
+      onChange={onChange}
+      required
+      endAdornment={(
+        <button
+          type="button"
+          className="auth-password-toggle"
+          aria-label={accessibilityLabel}
+          title={accessibilityLabel}
+          aria-pressed={isRevealed}
+          onClick={() => setIsRevealed((current) => !current)}
+        >
+          {isRevealed ? <EyeOpenIcon /> : <EyeClosedIcon />}
+        </button>
+      )}
+    />
+  );
+}
+
 const passwordIcons = {
   passwordField: {
     visibility: <EyeClosedIcon />,
@@ -155,17 +203,81 @@ const passwordIcons = {
   },
 };
 
-const inlineSignInComponents = {
-  Header() {
-    return null;
-  },
-  SignIn: {
-    Header() {
-      return null;
-    },
-    Footer: SignInFooter,
-  },
+const SIGN_IN_TIMEOUT_MS = 20000;
+
+const withTimeout = (promise, milliseconds, message) => {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
 };
+
+function EmailPasswordSignIn({ email, onComplete, onForgotPassword, onUnknownAccount }) {
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setErrorMessage('');
+    try {
+      const result = await withTimeout(
+        signIn({ username: email, password }),
+        SIGN_IN_TIMEOUT_MS,
+        'Sign in is taking longer than expected. Check your connection and try again.',
+      );
+      if (result?.isSignedIn || result?.nextStep?.signInStep === 'DONE') {
+        onComplete();
+        return;
+      }
+
+      if (result?.nextStep?.signInStep === 'RESET_PASSWORD') {
+        onForgotPassword();
+        return;
+      }
+
+      throw new Error('Cognito needs another sign-in step that this account does not currently support.');
+    } catch (error) {
+      console.error('Unable to sign in with email:', error);
+      if (error?.name === 'UserNotFoundException') {
+        onUnknownAccount();
+        return;
+      }
+      if (error?.name === 'NotAuthorizedException') {
+        setErrorMessage('Incorrect email or password. Please try again.');
+      } else if (error?.name === 'UserNotConfirmedException') {
+        setErrorMessage('This email still needs to be verified before you can sign in.');
+      } else {
+        setErrorMessage(error?.message || 'We could not sign you in. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form className="auth-inline-password-form" onSubmit={submit} noValidate>
+      <AuthPasswordField
+        id="auth-sign-in-password"
+        label="Password"
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+        autoComplete="current-password"
+      />
+      {errorMessage && <p className="auth-email-error" role="alert">{errorMessage}</p>}
+      <button type="submit" className="auth-choice-button auth-email-button" disabled={isSubmitting}>
+        {isSubmitting ? 'Signing in...' : 'Log in'}
+      </button>
+      <button type="button" className="auth-text-link auth-forgot-password" onClick={onForgotPassword}>
+        Forgot your password?
+      </button>
+    </form>
+  );
+}
 
 function GooglePasswordSetup({ email, onBack, onComplete }) {
   const [confirmationCode, setConfirmationCode] = useState('');
@@ -217,34 +329,34 @@ function GooglePasswordSetup({ email, onBack, onComplete }) {
         address so you can safely add email-and-password sign in to the same account.
       </p>
       <form className="auth-google-password-form" onSubmit={submit}>
-        <label htmlFor="auth-google-email">Email address</label>
-        <input id="auth-google-email" type="email" value={email} readOnly aria-readonly="true" />
-        <label htmlFor="auth-google-code">Verification code</label>
-        <input
+        <AuthFloatingField
+          id="auth-google-email"
+          label="Email address"
+          type="email"
+          value={email}
+          readOnly
+          aria-readonly="true"
+        />
+        <AuthFloatingField
           id="auth-google-code"
+          label="Verification code"
           inputMode="numeric"
           autoComplete="one-time-code"
           value={confirmationCode}
           onChange={(event) => setConfirmationCode(event.target.value)}
           required
         />
-        <label htmlFor="auth-google-password">Password</label>
-        <input
+        <AuthPasswordField
           id="auth-google-password"
-          type="password"
-          autoComplete="new-password"
+          label="Password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          required
         />
-        <label htmlFor="auth-google-confirm-password">Reenter password</label>
-        <input
+        <AuthPasswordField
           id="auth-google-confirm-password"
-          type="password"
-          autoComplete="new-password"
+          label="Confirm password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
-          required
         />
         {errorMessage && <p className="auth-email-error" role="alert">{errorMessage}</p>}
         <button type="submit" className="auth-choice-button auth-email-button" disabled={isSubmitting}>
@@ -417,6 +529,10 @@ function AuthenticatorCopy({ containerRef, hideUsername = false, lockEmail = fal
     if (!container) return undefined;
 
     const updateCopy = () => {
+      container.querySelectorAll('[data-amplify-form] .amplify-field').forEach((field) => {
+        field.classList.add('auth-floating-amplify-field');
+      });
+
       const signInForm = container.querySelector(
         'form[data-amplify-form][data-amplify-authenticator-signin]',
       );
@@ -453,6 +569,14 @@ function AuthenticatorCopy({ containerRef, hideUsername = false, lockEmail = fal
 
 export default function AuthModal() {
   const { isAuthModalOpen, closeAuth } = useAuth();
+  const authenticatorNavigation = useAuthenticator((context) => [
+    context.toSignIn,
+    context.toSignUp,
+    context.toForgotPassword,
+  ]);
+  const toSignIn = authenticatorNavigation?.toSignIn;
+  const toSignUp = authenticatorNavigation?.toSignUp;
+  const toForgotPassword = authenticatorNavigation?.toForgotPassword;
   const [authStage, setAuthStage] = useState('choice');
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -464,9 +588,37 @@ export default function AuthModal() {
   const [successMessage, setSuccessMessage] = useState('');
   const authContentRef = useRef(null);
   const lookupRequestRef = useRef(0);
+  const wasModalOpenRef = useRef(false);
+
+  useEffect(() => {
+    const wasOpen = wasModalOpenRef.current;
+    wasModalOpenRef.current = isAuthModalOpen;
+    if (wasOpen === isAuthModalOpen) return;
+
+    lookupRequestRef.current += 1;
+    if (isAuthModalOpen) toSignIn?.();
+    setAuthStage('choice');
+    setShowPassword(false);
+    setIsGoogleLoading(false);
+    setIsEmailLoading(false);
+    setGoogleError('');
+    setEmail('');
+    setCheckedEmail('');
+    setEmailError('');
+    setSuccessMessage('');
+  }, [isAuthModalOpen, toSignIn]);
 
   const openSignUp = () => {
+    toSignUp?.();
     setAuthStage('signUp');
+    setEmailError('');
+    setSuccessMessage('');
+    setGoogleError('');
+  };
+
+  const openForgotPassword = () => {
+    toForgotPassword?.();
+    setAuthStage('forgotPassword');
     setEmailError('');
     setSuccessMessage('');
     setGoogleError('');
@@ -474,11 +626,16 @@ export default function AuthModal() {
 
   const returnToChoice = () => {
     lookupRequestRef.current += 1;
+    toSignIn?.();
     setAuthStage('choice');
     setShowPassword(false);
+    setIsGoogleLoading(false);
+    setIsEmailLoading(false);
+    setEmail('');
     setCheckedEmail('');
     setEmailError('');
     setSuccessMessage('');
+    setGoogleError('');
   };
 
   const continueWithGoogle = async () => {
@@ -501,12 +658,14 @@ export default function AuthModal() {
 
   const handleClose = () => {
     lookupRequestRef.current += 1;
+    toSignIn?.();
     setAuthStage('choice');
     setShowPassword(false);
     setIsGoogleLoading(false);
     setIsEmailLoading(false);
     setGoogleError('');
     setEmailError('');
+    setEmail('');
     setCheckedEmail('');
     setSuccessMessage('');
     closeAuth();
@@ -550,6 +709,7 @@ export default function AuthModal() {
         }
         setAuthStage('googlePassword');
       } else if (accountType === 'password') {
+        toSignIn?.();
         setShowPassword(true);
       } else {
         throw new Error('The account check returned an invalid response.');
@@ -614,6 +774,32 @@ export default function AuthModal() {
               setSuccessMessage('Password added. You are now signed in.');
             }}
           />
+        ) : authStage === 'forgotPassword' ? (
+          <div className="auth-email-stage auth-sign-up-stage" ref={authContentRef}>
+            <button
+              type="button"
+              className="auth-back-button auth-back-button--icon"
+              onClick={returnToChoice}
+              aria-label="Back"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m14.5 6-6 6 6 6" />
+              </svg>
+            </button>
+            <img src={logo} alt="Trek A Trip" className="auth-logo auth-sign-up-logo" />
+            <h3 className="auth-sign-up-heading">Reset your password</h3>
+            <IconsProvider icons={passwordIcons}>
+              <Authenticator
+                key={`forgot-password-${checkedEmail}`}
+                initialState="forgotPassword"
+                loginMechanisms={['email']}
+                formFields={getFormFields(checkedEmail)}
+                components={authenticatorComponents}
+                services={services}
+              />
+            </IconsProvider>
+            <AuthenticatorCopy containerRef={authContentRef} />
+          </div>
         ) : authStage === 'signUp' ? (
           <div className="auth-email-stage auth-sign-up-stage" ref={authContentRef}>
             <button
@@ -700,17 +886,13 @@ export default function AuthModal() {
 
             {showPassword && (
               <div className="auth-inline-sign-in" ref={authContentRef}>
-                <IconsProvider icons={passwordIcons}>
-                  <Authenticator
-                    key={`sign-in-${checkedEmail}`}
-                    initialState="signIn"
-                    loginMechanisms={['email']}
-                    formFields={getFormFields(checkedEmail)}
-                    components={inlineSignInComponents}
-                    services={services}
-                  />
-                </IconsProvider>
-                <AuthenticatorCopy containerRef={authContentRef} hideUsername />
+                <EmailPasswordSignIn
+                  key={`sign-in-${checkedEmail}`}
+                  email={checkedEmail}
+                  onComplete={closeAuth}
+                  onForgotPassword={openForgotPassword}
+                  onUnknownAccount={openSignUp}
+                />
               </div>
             )}
 
