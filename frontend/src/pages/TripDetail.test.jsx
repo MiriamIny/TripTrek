@@ -338,7 +338,7 @@ describe('TripDetail', () => {
 
   })
  
-  it('exits edit mode when cancel is clicked in form', async () => {
+  it('exits edit mode when Done is clicked after changes are saved', async () => {
 
     renderWithProviders(<TripDetail />)
  
@@ -358,9 +358,7 @@ describe('TripDetail', () => {
 
     })
  
-    // Cancel editing
-
-    fireEvent.click(screen.getByText('Cancel'))
+    fireEvent.click(screen.getByRole('button', { name: 'Done editing' }))
  
     await waitFor(() => {
 
@@ -457,7 +455,7 @@ describe('TripDetail', () => {
     expect(screen.queryByRole('button', { name: 'Share Trip' })).not.toBeInTheDocument()
   })
 
-  it('offers to load the latest trip when a concurrent edit conflicts', async () => {
+  it('keeps the local draft open when autosave cannot resolve a conflict', async () => {
     mockTripContext.saveTrip = vi.fn().mockRejectedValue(new Error(
       'This trip changed since you opened it. Refresh the trip and review the latest changes before saving again.',
     ))
@@ -466,13 +464,12 @@ describe('TripDetail', () => {
     await waitFor(() => expect(screen.getByText('Edit Trip')).toBeInTheDocument())
     fireEvent.click(screen.getByText('Edit Trip'))
     fireEvent.change(screen.getByLabelText('Destination'), { target: { value: 'Updated Paris' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(
       'This trip changed since you opened it',
-    ))
-    fireEvent.click(screen.getByRole('button', { name: 'Load latest changes' }))
-    await waitFor(() => expect(mockTripContext.fetchTrips).toHaveBeenCalledTimes(1))
+    ), { timeout: 2000 })
+    expect(screen.getByLabelText('Destination')).toHaveValue('Updated Paris')
+    expect(screen.getByRole('button', { name: 'Done editing' })).toBeInTheDocument()
   })
 
 })

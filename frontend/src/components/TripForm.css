@@ -1380,6 +1380,20 @@
   font-size: 0.78rem;
 }
 
+.trip-form-save-status.is-saving,
+.trip-form-save-status.is-unsaved {
+  color: #8a5a2d;
+}
+
+.trip-form-save-status.is-saved {
+  color: var(--form-green);
+}
+
+.trip-form-save-status.is-error {
+  color: #a64032;
+  font-weight: 700;
+}
+
 .trip-form-actions > div {
   display: flex;
   align-items: center;

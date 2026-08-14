@@ -91,7 +91,7 @@ export const handler = async (event) => {
       ConditionExpression: expectedVersion === null
         ? 'attribute_exists(pk) AND attribute_exists(sk)'
         : 'attribute_exists(pk) AND attribute_exists(sk) AND (attribute_not_exists(#version) OR #version = :expectedVersion)',
-      ReturnValues: 'UPDATED_NEW',
+      ReturnValues: 'ALL_NEW',
     }))
     return response(200, result.Attributes)
   } catch (error) {
@@ -101,7 +101,10 @@ export const handler = async (event) => {
         Key: { pk: ownerId, sk: tripId },
       }))
       return current.Item
-        ? response(409, { message: 'This trip changed since you opened it. Refresh the trip and review the latest changes before saving again.' })
+        ? response(409, {
+            message: 'This trip changed while you were editing. Review the latest changes and try again.',
+            currentTrip: current.Item,
+          })
         : response(404, { message: 'Trip not found.' })
     }
     console.error('Error updating trip:', error)

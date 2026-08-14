@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import TripForm from './TripForm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -83,6 +83,66 @@ const mockTrip = {
 describe('TripForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
+  });
+
+  it('debounces edit changes and autosaves only the latest draft', async () => {
+    vi.useFakeTimers();
+    const editTrip = { ...mockTrip, id: 'trip-1', sk: 'trip-1', ownerId: 'owner-1', version: 1 };
+    const onAutoSave = vi.fn(async (draft) => ({ ...draft, version: 2 }));
+    try {
+      render(
+        <TripForm
+          trip={editTrip}
+          onAutoSave={onAutoSave}
+          onAutoSaveError={vi.fn()}
+          onDone={vi.fn()}
+        />,
+      );
+
+      const destination = screen.getByLabelText('Destination');
+      fireEvent.change(destination, { target: { value: 'Par' } });
+      fireEvent.change(destination, { target: { value: 'Paris and Lyon' } });
+      expect(onAutoSave).not.toHaveBeenCalled();
+      expect(window.localStorage.length).toBe(1);
+
+      await act(async () => {
+        vi.advanceTimersByTime(801);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onAutoSave).toHaveBeenCalledTimes(1);
+      expect(onAutoSave).toHaveBeenCalledWith(expect.objectContaining({
+        destination: 'Paris and Lyon',
+        version: 1,
+      }));
+      expect(screen.getByRole('status')).toHaveTextContent('All changes saved');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('restores a local draft and combines it with a newer server trip', () => {
+    const baseTrip = {
+      ...mockTrip,
+      id: 'trip-recovery',
+      sk: 'trip-recovery',
+      ownerId: 'owner-1',
+      version: 1,
+      imageUrl: '',
+    };
+    const localDraft = { ...baseTrip, destination: 'Paris and Lyon' };
+    const serverTrip = { ...baseTrip, version: 2, imageUrl: 'remote-photo.jpg' };
+    window.localStorage.setItem(
+      'trek-a-trip:trip-draft:owner-1:trip-recovery',
+      JSON.stringify({ baseTrip, trip: localDraft, serverVersion: 1 }),
+    );
+
+    render(<TripForm trip={serverTrip} onAutoSave={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.getByLabelText('Destination')).toHaveValue('Paris and Lyon');
+    expect(screen.getByAltText('Cover for Paris and Lyon')).toHaveAttribute('src', 'remote-photo.jpg');
   });
 
   it('renders with pre-filled trip data', () => {

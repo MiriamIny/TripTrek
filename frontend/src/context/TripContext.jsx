@@ -1,8 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { eachDayOfInterval, format, parse } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from './AuthContext'
 import { tripApiFetch } from '../api/tripApi'
+import {
+  buildTripUpdates,
+  ensureActivityIds,
+  mergeTripDraft,
+  normalizeTripRecord,
+} from '../utils/tripAutosave'
 
 const TripContext = createContext()
 
@@ -23,7 +29,7 @@ const makeItinerary = (trip) => {
   return days.map((date) => {
     const dateString = format(date, 'MM/dd/yyyy')
     const activities = trip.itinerary?.find((day) => day.date === dateString)?.activities || []
-    return { date: dateString, activities: [...activities] }
+    return { date: dateString, activities: ensureActivityIds([{ date: dateString, activities }])[0].activities }
   })
 }
 
@@ -32,8 +38,34 @@ export const TripProvider = ({ children }) => {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const tripsRef = useRef([])
 
-  const fetchTrips = useCallback(async () => {
+  useEffect(() => {
+    tripsRef.current = trips
+  }, [trips])
+
+  const replaceTrip = useCallback((savedTrip, previousTrip) => {
+    const normalized = normalizeTripRecord({
+      ...previousTrip,
+      ...savedTrip,
+      id: savedTrip.id || savedTrip.sk || previousTrip.id,
+      sk: savedTrip.sk || savedTrip.id || previousTrip.sk,
+      ownerId: savedTrip.ownerId || previousTrip.ownerId,
+      access: previousTrip.access,
+      sharedByName: previousTrip.sharedByName,
+      sharedByEmail: previousTrip.sharedByEmail,
+    })
+    setTrips((current) => {
+      const next = current.map((candidate) => (
+        candidate.id === previousTrip.id ? normalized : candidate
+      ))
+      tripsRef.current = next
+      return next
+    })
+    return normalized
+  }, [])
+
+  const fetchTrips = useCallback(async ({ background = false } = {}) => {
     if (!isAuthenticated || !user?.userId) {
       setTrips([])
       setError('')
@@ -41,26 +73,21 @@ export const TripProvider = ({ children }) => {
     }
     if (accountReady === false) return
 
-    setLoading(true)
-    setError('')
+    if (!background) {
+      setLoading(true)
+      setError('')
+    }
     try {
       const response = await tripApiFetch('getTripList')
       const data = await response.json()
-      setTrips((Array.isArray(data) ? data : []).map((trip) => ({
-        ...trip,
-        id: trip.sk,
-        ownerId: trip.ownerId || trip.pk,
-        access: trip.access || 'owner',
-        itinerary: trip.itinerary?.map((day) => ({
-          ...day,
-          activities: [...(day.activities || [])],
-        })) || [],
-      })))
+      const normalizedTrips = (Array.isArray(data) ? data : []).map(normalizeTripRecord)
+      tripsRef.current = normalizedTrips
+      setTrips(normalizedTrips)
     } catch (fetchError) {
       console.error('Error fetching trips:', fetchError)
-      setError(fetchError.message || 'Unable to load your trips.')
+      if (!background) setError(fetchError.message || 'Unable to load your trips.')
     } finally {
-      setLoading(false)
+      if (!background) setLoading(false)
     }
   }, [accountReady, isAuthenticated, user?.userId])
 
@@ -88,36 +115,49 @@ export const TripProvider = ({ children }) => {
   }, [user?.userId])
 
   const saveTrip = useCallback(async (trip) => {
-    const finalTrip = { ...trip, itinerary: makeItinerary(trip) }
+    const finalTrip = normalizeTripRecord({ ...trip, itinerary: makeItinerary(trip) })
 
     if (trip.id) {
-      const existingTrip = trips.find((candidate) => candidate.id === trip.id)
+      const existingTrip = tripsRef.current.find((candidate) => candidate.id === trip.id)
       if (!existingTrip) throw new Error('This trip is no longer available.')
       if (existingTrip.access === 'viewer') {
         throw new Error('You have view-only access to this trip.')
       }
 
       const ownerId = existingTrip.ownerId
-      const updates = {}
-      if (existingTrip.destination !== trip.destination) {
-        updates.destination = finalTrip.destination
-        updates.mapData = null
-      }
-      if (existingTrip.startDate !== trip.startDate) {
-        updates.startDate = trip.startDate
-      }
-      if (existingTrip.endDate !== trip.endDate) {
-        updates.endDate = trip.endDate
-      }
-      if (!('mapData' in updates)
-        && JSON.stringify(existingTrip.mapData) !== JSON.stringify(trip.mapData)) {
-        updates.mapData = trip.mapData ?? null
-      }
-      if (JSON.stringify(existingTrip.itinerary) !== JSON.stringify(finalTrip.itinerary)) {
-        updates.itinerary = finalTrip.itinerary
-      }
-      if (Object.keys(updates).length) {
-        await updateTripAPI(trip.id, updates, ownerId, existingTrip.version ?? 0)
+      let updates = buildTripUpdates(existingTrip, finalTrip)
+      if (!Object.keys(updates).length) return existingTrip
+
+      try {
+        const saved = await updateTripAPI(
+          trip.id,
+          updates,
+          ownerId,
+          existingTrip.version ?? 0,
+        )
+        return replaceTrip(saved, existingTrip)
+      } catch (saveError) {
+        const remoteTrip = saveError.status === 409 && saveError.data?.currentTrip
+        if (!remoteTrip) throw saveError
+
+        const latest = normalizeTripRecord({
+          ...remoteTrip,
+          access: existingTrip.access,
+          ownerId,
+          sharedByName: existingTrip.sharedByName,
+          sharedByEmail: existingTrip.sharedByEmail,
+        })
+        const rebased = mergeTripDraft(existingTrip, finalTrip, latest)
+        updates = buildTripUpdates(latest, rebased)
+        if (!Object.keys(updates).length) return replaceTrip(latest, existingTrip)
+
+        const saved = await updateTripAPI(
+          trip.id,
+          updates,
+          ownerId,
+          latest.version ?? 0,
+        )
+        return replaceTrip(saved, existingTrip)
       }
     } else {
       finalTrip.id = uuidv4()
@@ -130,7 +170,8 @@ export const TripProvider = ({ children }) => {
     }
 
     await fetchTrips()
-  }, [fetchTrips, trips, updateTripAPI])
+    return finalTrip
+  }, [fetchTrips, replaceTrip, updateTripAPI])
 
   const uploadTripImage = useCallback(async (file, locationName, tripId) => {
     const trip = tripId ? trips.find((candidate) => candidate.id === tripId) : null
@@ -160,17 +201,8 @@ export const TripProvider = ({ children }) => {
     })
     if (!uploadResponse.ok) throw new Error('Unable to upload that image.')
 
-    if (tripId) {
-      await updateTripAPI(
-        tripId,
-        { imageUrl },
-        trip?.ownerId,
-        trip?.version ?? 0,
-      )
-      await fetchTrips()
-    }
     return imageUrl
-  }, [fetchTrips, trips, updateTripAPI])
+  }, [trips])
 
   const getTripCollaborators = useCallback(async (tripId, ownerId) => {
     const query = new URLSearchParams({ tripId })

@@ -90,6 +90,21 @@ export default function TripDetail() {
     if (trips.length > 0) setTrip(getTripById(tripId));
   }, [trips, tripId, getTripById]);
 
+  useEffect(() => {
+    if (editingTrip) return undefined;
+    const refreshInBackground = () => {
+      if (document.visibilityState === 'visible') fetchTrips({ background: true });
+    };
+    const interval = window.setInterval(refreshInBackground, 10000);
+    window.addEventListener('focus', refreshInBackground);
+    document.addEventListener('visibilitychange', refreshInBackground);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshInBackground);
+      document.removeEventListener('visibilitychange', refreshInBackground);
+    };
+  }, [editingTrip, fetchTrips]);
+
   const activityCount = useMemo(() => (
     trip?.itinerary?.reduce((total, day) => total + (day.activities?.length || 0), 0) || 0
   ), [trip]);
@@ -97,21 +112,15 @@ export default function TripDetail() {
   const isOwner = !trip?.access || trip.access === 'owner';
   const canEdit = isOwner || trip?.access === 'editor';
 
-  const handleSave = async (updatedTrip) => {
+  const handleAutoSave = useCallback(async (updatedTrip) => {
     try {
       setSaveError('');
-      await saveTrip(updatedTrip);
-      setEditingTrip(null);
+      return await saveTrip(updatedTrip);
     } catch (error) {
       setSaveError(error.message || 'Unable to save this trip.');
+      throw error;
     }
-  };
-
-  const handleLoadLatest = async () => {
-    setEditingTrip(null);
-    setSaveError('');
-    await fetchTrips();
-  };
+  }, [saveTrip]);
 
   const handleActivityMapUpdate = async (dayIndex, activityIndex, mapUpdates) => {
     const itinerary = trip.itinerary.map((day, currentDayIndex) => (
@@ -299,7 +308,6 @@ export default function TripDetail() {
             tabIndex="-1"
           >
             <span>{saveError}</span>
-            <button type="button" onClick={handleLoadLatest}>Load latest changes</button>
           </div>
         )}
 
@@ -307,8 +315,11 @@ export default function TripDetail() {
           <section className="trip-detail-edit-section" aria-label="Edit trip">
             <TripForm
               trip={editingTrip}
-              onSave={handleSave}
-              onCancel={() => {
+              onAutoSave={handleAutoSave}
+              onAutoSaveError={(error) => setSaveError(
+                error.message || 'Unable to sync this trip. Your changes are safe on this device.',
+              )}
+              onDone={() => {
                 setEditingTrip(null);
                 setSaveError('');
               }}

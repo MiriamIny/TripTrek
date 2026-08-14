@@ -125,6 +125,50 @@ describe('TripContext', () => {
       updates: { destination: 'New Paris', mapData: null },
       expectedVersion: 3,
     })
+    expect(tripApiFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('rebases a local edit onto the current server version after a conflict', async () => {
+    const versionedTrip = { ...ownedTrip, version: 1 }
+    tripApiFetch.mockResolvedValueOnce(response([versionedTrip]))
+    const { result } = renderContext()
+    await waitFor(() => expect(result.current.trips).toHaveLength(1))
+    tripApiFetch.mockClear()
+
+    const conflict = new Error('Trip changed')
+    conflict.status = 409
+    conflict.data = {
+      currentTrip: {
+        ...versionedTrip,
+        version: 2,
+        itinerary: [{
+          ...versionedTrip.itinerary[0],
+          activities: [
+            ...versionedTrip.itinerary[0].activities,
+            { id: 'remote-dinner', name: 'Dinner', time: '7:00 PM' },
+          ],
+        }],
+      },
+    }
+    tripApiFetch
+      .mockRejectedValueOnce(conflict)
+      .mockResolvedValueOnce(response({
+        ...conflict.data.currentTrip,
+        destination: 'New Paris',
+        version: 3,
+      }))
+
+    await act(() => result.current.saveTrip({
+      ...result.current.trips[0],
+      destination: 'New Paris',
+    }))
+
+    expect(tripApiFetch).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(tripApiFetch.mock.calls[1][1].body).expectedVersion).toBe(2)
+    expect(result.current.trips[0]).toMatchObject({ destination: 'New Paris', version: 3 })
+    expect(result.current.trips[0].itinerary[0].activities).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'remote-dinner', name: 'Dinner' }),
+    ]))
   })
 
   it('leaves a shared trip instead of deleting the owner trip', async () => {
