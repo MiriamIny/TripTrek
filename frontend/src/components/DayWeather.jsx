@@ -73,6 +73,7 @@ function WeatherLocationCard({ location, dayPlan }) {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const hourlyRef = useRef(null);
 
   useEffect(() => {
     let isCurrent = true;
@@ -101,6 +102,20 @@ function WeatherLocationCard({ location, dayPlan }) {
       isCurrent = false;
     };
   }, [dayPlan.date, location.latitude, location.longitude, location.name]);
+
+  useEffect(() => {
+    if (!weather?.hourly?.length) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const track = hourlyRef.current;
+      const noon = track?.querySelector('[data-hour="12"]')
+        || track?.children[Math.floor(track.children.length / 2)];
+      if (!track || !noon) return;
+      const centeredLeft = noon.offsetLeft - ((track.clientWidth - noon.offsetWidth) / 2);
+      track.scrollTo?.({ left: Math.max(0, centeredLeft), behavior: 'auto' });
+      if (!track.scrollTo) track.scrollLeft = Math.max(0, centeredLeft);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [weather]);
 
   return (
     <article className="trip-day-weather-slide" aria-label={`Weather for ${location.name}`}>
@@ -151,7 +166,7 @@ function WeatherLocationCard({ location, dayPlan }) {
               <div className="trip-day-weather-hourly-heading">
                 <strong>Hourly forecast</strong>
               </div>
-              <div className="trip-day-weather-hourly" aria-label="Hourly forecast">
+              <div ref={hourlyRef} className="trip-day-weather-hourly" aria-label="Hourly forecast">
                 {weather.hourly.map((hour, index) => {
                   const previousHour = weather.hourly[index - 1];
                   const transition = previousHour?.isDaytime === false && hour.isDaytime === true
@@ -163,6 +178,7 @@ function WeatherLocationCard({ location, dayPlan }) {
                   return (
                   <section
                     key={hour.hour}
+                    data-hour={hour.hour}
                     className={`${timeOfDay}${transition}`}
                     aria-label={`${formatHour(hour.hour)}: ${hour.description}`}
                   >

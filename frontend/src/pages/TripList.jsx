@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TripForm from '../components/TripForm'
 import { useTripContext } from '../context/TripContext'
@@ -106,6 +106,14 @@ export default function TripList() {
   const [showForm, setShowForm] = useState(false)
   const [operationLoading, setOperationLoading] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const [isCreateHeaderCompact, setIsCreateHeaderCompact] = useState(false)
+  const [expandedCreateHeaderHeight, setExpandedCreateHeaderHeight] = useState(0)
+  const createHeaderRef = useRef(null)
+
+  useLayoutEffect(() => {
+    if (!showForm || isCreateHeaderCompact || !createHeaderRef.current) return
+    setExpandedCreateHeaderHeight(createHeaderRef.current.offsetHeight)
+  }, [isCreateHeaderCompact, showForm])
 
   useEffect(() => {
     if (isAuthenticated && !initialized) {
@@ -113,6 +121,22 @@ export default function TripList() {
       setInitialized(true)
     }
   }, [fetchTrips, initialized, isAuthenticated])
+
+  useEffect(() => {
+    if (!showForm) {
+      setIsCreateHeaderCompact(false)
+      return undefined
+    }
+    const headerTop = createHeaderRef.current?.offsetTop || 0
+    const compactAt = headerTop + 72
+    const expandAt = headerTop + 18
+    const updateHeader = () => setIsCreateHeaderCompact((isCompact) => (
+      isCompact ? window.scrollY > expandAt : window.scrollY > compactAt
+    ))
+    updateHeader()
+    window.addEventListener('scroll', updateHeader, { passive: true })
+    return () => window.removeEventListener('scroll', updateHeader)
+  }, [showForm])
 
   const handleSave = useCallback(async (trip) => {
     setOperationLoading(true)
@@ -205,21 +229,33 @@ export default function TripList() {
     return (
       <main className="trips-dashboard trips-dashboard--form">
         <div className="trips-dashboard-inner">
-          <header className="trip-form-header">
-            <button
-              type="button"
-              className="trips-back-button"
-              onClick={() => setShowForm(false)}
-              disabled={operationLoading}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-              Back to trips
-            </button>
+          <button
+            type="button"
+            className="trips-context-backbar"
+            onClick={() => setShowForm(false)}
+            disabled={operationLoading}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19 12H5M11 6l-6 6 6 6" />
+            </svg>
+            <span>Back to Trips</span>
+          </button>
+          <header
+            ref={createHeaderRef}
+            className={`trip-form-header${isCreateHeaderCompact ? ' is-compact' : ''}`}
+          >
             <p className="trips-eyebrow">Start somewhere new</p>
             <h1>Create a new trip</h1>
           </header>
+          <div
+            className="trip-form-header-spacer"
+            style={{
+              height: isCreateHeaderCompact
+                ? Math.max(0, expandedCreateHeaderHeight - 58)
+                : 0,
+            }}
+            aria-hidden="true"
+          />
 
           <section className="trip-form-stage" aria-label="Create a new trip">
             <TripForm
@@ -304,10 +340,17 @@ export default function TripList() {
                             <RouteMark />
                           </span>
                         )}
-                        <span className="trip-card-saved-label">
-                          {!trip.access || trip.access === 'owner'
-                            ? 'Owner'
+                        <span
+                          className={`trip-card-saved-label${!trip.access || trip.access === 'owner' ? '' : ' is-shared'}`}
+                          data-access={!trip.access || trip.access === 'owner'
+                            ? undefined
                             : trip.access === 'viewer' ? 'Viewer' : 'Editor'}
+                          aria-label={!trip.access || trip.access === 'owner'
+                            ? 'Owner'
+                            : `Shared with you as ${trip.access === 'viewer' ? 'Viewer' : 'Editor'}`}
+                          tabIndex={!trip.access || trip.access === 'owner' ? undefined : 0}
+                        >
+                          {!trip.access || trip.access === 'owner' ? 'Owner' : 'Shared with you'}
                         </span>
                       </span>
 

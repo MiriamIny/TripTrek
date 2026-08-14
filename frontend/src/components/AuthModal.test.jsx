@@ -114,7 +114,7 @@ describe('AuthModal', () => {
     expect(screen.getByRole('heading', { name: 'Sign in or create account' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
     expect(await screen.findByLabelText('Password')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     expect(publicTripApiFetch).toHaveBeenCalledWith('accountLookup', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ email: 'miriam@example.com' }),
@@ -123,7 +123,7 @@ describe('AuthModal', () => {
     expect(authenticatorNavigation.toSignIn).toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password1!' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     await waitFor(() => expect(signIn).toHaveBeenCalledWith({
       username: 'miriam@example.com',
       password: 'Password1!',
@@ -142,10 +142,10 @@ describe('AuthModal', () => {
     fireEvent.change(await screen.findByLabelText('Password'), {
       target: { value: 'WrongPassword1!' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect email or password');
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Signing in...' })).not.toBeInTheDocument();
   });
 

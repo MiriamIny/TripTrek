@@ -136,6 +136,11 @@ function TripFormContent({
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [isPreparingImage, setIsPreparingImage] = useState(false);
   const [saveStatus, setSaveStatus] = useState(isEditing ? 'saved' : 'idle');
+  const [showDockedActions, setShowDockedActions] = useState(false);
+  const formRef = useRef(null);
+  const essentialsRef = useRef(null);
+  const actionsSlotRef = useRef(null);
+  const actionsRef = useRef(null);
   const autosaveTimerRef = useRef(null);
   const saveChainRef = useRef(Promise.resolve());
   const savedVersionRef = useRef(Number(trip.version ?? 0));
@@ -373,6 +378,65 @@ function TripFormContent({
     return () => window.removeEventListener('beforeunload', protectUnsyncedDraft);
   }, [isEditing, saveStatus]);
 
+  useEffect(() => {
+    const updateDockedActions = () => {
+      const formBounds = formRef.current?.getBoundingClientRect();
+      const essentialsBounds = essentialsRef.current?.getBoundingClientRect();
+      const actionsBounds = actionsSlotRef.current?.getBoundingClientRect();
+      if (!formBounds || !essentialsBounds) return;
+      if (actionsBounds && actionsRef.current) {
+        actionsRef.current.style.setProperty('--trip-actions-left', `${actionsBounds.left}px`);
+        actionsRef.current.style.setProperty('--trip-actions-width', `${actionsBounds.width}px`);
+      }
+      const headerHeight = Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--site-header-height'),
+      ) || 72;
+      const reachedActions = isEditing
+        ? formBounds.top <= headerHeight + 56
+        : essentialsBounds.bottom <= window.innerHeight - 24;
+      const normalActionsAreVisible = formBounds.bottom <= window.innerHeight + 84;
+      setShowDockedActions(reachedActions && !normalActionsAreVisible);
+    };
+    updateDockedActions();
+    window.addEventListener('scroll', updateDockedActions, { passive: true });
+    window.addEventListener('resize', updateDockedActions);
+    return () => {
+      window.removeEventListener('scroll', updateDockedActions);
+      window.removeEventListener('resize', updateDockedActions);
+    };
+  }, [isEditing]);
+
+  useEffect(() => {
+    document.body.classList.toggle('trip-form-actions-docked', showDockedActions);
+    return () => document.body.classList.remove('trip-form-actions-docked');
+  }, [showDockedActions]);
+
+  const handleDateChange = (nextStartDate, nextEndDate) => {
+    const datesChanged = nextStartDate !== startDate || nextEndDate !== endDate;
+    if (datesChanged && nextStartDate && nextEndDate) {
+      const nextStart = parseMDY(nextStartDate);
+      const nextEnd = parseMDY(nextEndDate);
+      const removedPlannedDays = itinerary.filter((day) => {
+        if (!day.activities?.length) return false;
+        const dayDate = parseMDY(day.date);
+        return dayDate < nextStart || dayDate > nextEnd;
+      });
+      if (removedPlannedDays.length) {
+        const planCount = removedPlannedDays.reduce(
+          (total, day) => total + day.activities.length,
+          0,
+        );
+        const confirmed = window.confirm(
+          `Changing these dates will remove ${pluralize(planCount, 'planned activity', 'planned activities')} from ${pluralize(removedPlannedDays.length, 'day')}. Continue?`,
+        );
+        if (!confirmed) return;
+      }
+    }
+    setStartDate(nextStartDate);
+    setEndDate(nextEndDate);
+    if (error) setError('');
+  };
+
   const handleDone = async () => {
     if (!destination.trim() || !startDate || !endDate) {
       setError('Please add a destination and both travel dates.');
@@ -409,7 +473,7 @@ function TripFormContent({
   };
 
   return (
-    <form className="trip-planner-form" onSubmit={handleSubmit} noValidate>
+    <form ref={formRef} className="trip-planner-form" onSubmit={handleSubmit} noValidate>
       <div className="trip-planner-intro">
         <div>
           <p>{isEditing ? 'Update your plans' : 'Build the basics'}</p>
@@ -433,7 +497,7 @@ function TripFormContent({
 
       <div className="trip-planner-layout">
         <div className="trip-planner-main">
-          <section className="trip-form-section" aria-labelledby="trip-essentials-heading">
+          <section ref={essentialsRef} className="trip-form-section" aria-labelledby="trip-essentials-heading">
             <header className="trip-form-section-heading">
               <span>01</span>
               <div>
@@ -471,11 +535,7 @@ function TripFormContent({
                   startDate={startDate}
                   endDate={endDate}
                   placeholder="Choose your travel dates"
-                  onChange={(nextStartDate, nextEndDate) => {
-                    setStartDate(nextStartDate);
-                    setEndDate(nextEndDate);
-                    if (error) setError('');
-                  }}
+                  onChange={handleDateChange}
                 />
                 <small>Select your arrival date, then your departure date.</small>
               </div>
@@ -850,34 +910,39 @@ function TripFormContent({
         </aside>
       </div>
 
-      <footer className="trip-form-actions">
-        <p className={`trip-form-save-status is-${saveStatus}`} role={isEditing ? 'status' : undefined}>
-          {isEditing && saveStatus === 'saving' && 'Saving changesâ€¦'}
-          {isEditing && saveStatus === 'saved' && 'All changes saved'}
-          {isEditing && saveStatus === 'unsaved' && 'Changes safe on this device'}
-          {isEditing && saveStatus === 'error' && 'Could not sync. Changes are safe on this device.'}
-          {!isEditing && 'You can come back and refine your itinerary anytime.'}
-        </p>
-        <div>
-          {!isEditing && (
-            <button type="button" className="trip-form-cancel" onClick={onCancel}>
-              Cancel
+      <div ref={actionsSlotRef} className="trip-form-actions-slot">
+        <footer
+          ref={actionsRef}
+          className={`trip-form-actions${isEditing ? ' is-editing' : ''}${showDockedActions ? ' is-docked' : ''}`}
+        >
+          <p className={`trip-form-save-status is-${saveStatus}`} role={isEditing ? 'status' : undefined}>
+            {isEditing && saveStatus === 'saving' && 'Saving changes…'}
+            {isEditing && saveStatus === 'saved' && 'All changes saved'}
+            {isEditing && saveStatus === 'unsaved' && 'Changes safe on this device'}
+            {isEditing && saveStatus === 'error' && 'Could not sync. Changes are safe on this device.'}
+            {!isEditing && 'You can come back and refine your itinerary anytime.'}
+          </p>
+          <div>
+            {!isEditing && (
+              <button type="button" className="trip-form-cancel" onClick={onCancel}>
+                Cancel
+              </button>
+            )}
+            <button
+              type={isEditing ? 'button' : 'submit'}
+              className="trip-form-save"
+              aria-label={isEditing ? 'Done editing' : 'Save trip'}
+              disabled={isPreparingImage || (isEditing && saveStatus === 'saving')}
+              onClick={isEditing ? handleDone : undefined}
+            >
+              <span>{isEditing ? 'Done' : 'Create trip'}</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13M13 6l6 6-6 6" />
+              </svg>
             </button>
-          )}
-          <button
-            type={isEditing ? 'button' : 'submit'}
-            className="trip-form-save"
-            aria-label={isEditing ? 'Done editing' : 'Save trip'}
-            disabled={isPreparingImage || (isEditing && saveStatus === 'saving')}
-            onClick={isEditing ? handleDone : undefined}
-          >
-            <span>{isEditing ? 'Done' : 'Create trip'}</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h13M13 6l6 6-6 6" />
-            </svg>
-          </button>
-        </div>
-      </footer>
+          </div>
+        </footer>
+      </div>
     </form>
   );
 }

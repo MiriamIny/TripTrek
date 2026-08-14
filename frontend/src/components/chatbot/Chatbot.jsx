@@ -206,14 +206,6 @@ const Chatbot = () => {
 
   return (
     <div className="trekka-chat">
-      {hasNotification && !isOpen && (
-        <div className="trekka-notification" role="status">
-          <strong>Trekka has an idea</strong>
-          <span>Open your travel assistant</span>
-          <span className="trekka-notification-arrow" aria-hidden="true" />
-        </div>
-      )}
-
       <section
         id="trekka-chat-panel"
         className={`trekka-panel ${isOpen ? 'trekka-panel--open' : ''}`}

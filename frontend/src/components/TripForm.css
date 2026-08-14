@@ -1363,8 +1363,8 @@
 
 .trip-form-actions {
   display: flex;
-  margin-top: 1.5rem;
-  padding: 1.1rem 1.25rem;
+  margin-top: 1rem;
+  padding: 0.62rem 0.9rem;
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(38, 59, 61, 0.1);
   border-radius: 16px;
@@ -1372,6 +1372,23 @@
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
+}
+
+.trip-form-actions-slot {
+  min-height: 62px;
+}
+
+.trip-form-actions.is-docked {
+  position: fixed;
+  right: auto;
+  bottom: 0.65rem;
+  left: var(--trip-actions-left, max(0.75rem, calc((100vw - 1160px) / 2)));
+  width: var(--trip-actions-width, min(1160px, calc(100vw - 1.5rem)));
+  z-index: 900;
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 34px rgba(38, 59, 61, 0.18);
 }
 
 .trip-form-actions > p {
@@ -1402,8 +1419,8 @@
 
 .trip-form-cancel,
 .trip-form-save {
-  min-height: 44px;
-  padding: 0.7rem 1rem;
+  min-height: 40px;
+  padding: 0.52rem 0.9rem;
   border-radius: 9px;
   font: inherit;
   font-size: 0.84rem;
@@ -1508,6 +1525,11 @@
     flex-direction: column;
   }
 
+  .trip-form-actions.is-docked {
+    bottom: 0.45rem;
+    padding: 0.58rem 0.7rem;
+  }
+
   .trip-form-actions > p {
     text-align: center;
   }
@@ -1520,6 +1542,34 @@
   .trip-form-cancel,
   .trip-form-save {
     justify-content: center;
+  }
+
+  .trip-form-actions.is-editing {
+    padding: 0.5rem 0.65rem;
+    align-items: center;
+    flex-direction: row;
+    gap: 0.55rem;
+  }
+
+  .trip-form-actions.is-editing > p {
+    min-width: 0;
+    overflow: hidden;
+    flex: 1 1 auto;
+    font-size: 0.68rem;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .trip-form-actions.is-editing > div {
+    display: flex;
+    flex: 0 0 auto;
+  }
+
+  .trip-form-actions.is-editing .trip-form-save {
+    min-height: 36px;
+    padding: 0.42rem 0.72rem;
+    white-space: nowrap;
   }
 }
 

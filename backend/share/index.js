@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import {
+  BatchGetCommand,
   DynamoDBDocumentClient,
   GetCommand,
   QueryCommand,
@@ -36,6 +37,27 @@ const getOwnedTrip = (ownerId, tripId) => db.send(new GetCommand({
   TableName: TABLE_NAME,
   Key: { pk: ownerId, sk: tripId },
 }))
+
+const profilesForEmails = async (emails) => {
+  const uniqueEmails = [...new Set(emails.map(normalizeEmail).filter(validEmail))]
+  if (!uniqueEmails.length) return new Map()
+  const emailByKey = new Map(uniqueEmails.map((email) => [accountKey(email), email]))
+  const result = await db.send(new BatchGetCommand({
+    RequestItems: {
+      [TABLE_NAME]: {
+        Keys: [...emailByKey.keys()].map((pk) => ({ pk, sk: 'AUTH' })),
+        ProjectionExpression: 'pk, preferredName, preferredPicture',
+      },
+    },
+  }))
+  return new Map((result.Responses?.[TABLE_NAME] || []).map((item) => [
+    emailByKey.get(item.pk),
+    {
+      ...(item.preferredName ? { name: item.preferredName } : {}),
+      ...(item.preferredPicture ? { picture: item.preferredPicture } : {}),
+    },
+  ]))
+}
 
 const canManageOwnerId = async (claims, ownerId) => {
   if (ownerId === claims.sub) return true
@@ -201,19 +223,52 @@ export const handler = async (event) => {
 
   if (method === 'GET') {
     try {
-      if (!(await canManageOwnerId(claims, managedOwnerId))) {
-        return response(403, { message: 'Only the trip owner can manage sharing.' })
-      }
+      const canManage = await canManageOwnerId(claims, managedOwnerId)
       const trip = await getOwnedTrip(managedOwnerId, tripId)
-      if (!trip.Item) return response(403, { message: 'Only the trip owner can manage sharing.' })
+      if (!trip.Item) return response(403, { message: 'You do not have access to this trip.' })
+      if (!canManage) {
+        if (!validEmail(callerEmail)) return response(403, { message: 'You do not have access to this trip.' })
+        const invite = await db.send(new GetCommand({
+          TableName: TABLE_NAME,
+          Key: { pk: `INVITEE#${callerEmail}`, sk: tripKey(managedOwnerId, tripId) },
+        }))
+        if (!invite.Item) return response(403, { message: 'You do not have access to this trip.' })
+      }
       const result = await db.send(new QueryCommand({
         TableName: TABLE_NAME,
         KeyConditionExpression: 'pk = :trip',
         ExpressionAttributeValues: { ':trip': tripKey(managedOwnerId, tripId) },
       }))
-      return response(200, (result.Items || []).map(({ email, permission, createdAt }) => ({
+      const collaborators = (result.Items || []).map(({ email, permission, createdAt }) => ({
         email, permission, createdAt,
-      })))
+      }))
+      if (event?.queryStringParameters?.includeProfiles !== 'true') {
+        return response(200, collaborators)
+      }
+
+      const firstInvite = result.Items?.[0]
+      const ownerEmail = normalizeEmail(trip.Item.ownerEmail || firstInvite?.invitedByEmail)
+      const profiles = await profilesForEmails([
+        ownerEmail,
+        ...collaborators.map(({ email }) => email),
+      ])
+      return response(200, {
+        owner: {
+          email: ownerEmail,
+          name: profiles.get(ownerEmail)?.name
+            || trip.Item.ownerName
+            || firstInvite?.invitedByName
+            || ownerEmail
+            || 'Trip owner',
+          picture: profiles.get(ownerEmail)?.picture || '',
+          permission: 'owner',
+        },
+        collaborators: collaborators.map((collaborator) => ({
+          ...collaborator,
+          name: profiles.get(collaborator.email)?.name || '',
+          picture: profiles.get(collaborator.email)?.picture || '',
+        })),
+      })
     } catch (error) {
       console.error('Error listing collaborators:', error)
       return response(500, { message: 'Unable to load collaborators.' })

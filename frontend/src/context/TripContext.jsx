@@ -211,6 +211,13 @@ export const TripProvider = ({ children }) => {
     return response.json()
   }, [])
 
+  const getTripBuddies = useCallback(async (tripId, ownerId) => {
+    const query = new URLSearchParams({ tripId, includeProfiles: 'true' })
+    if (ownerId) query.set('ownerId', ownerId)
+    const response = await tripApiFetch(`tripShares?${query}`)
+    return response.json()
+  }, [])
+
   const shareTrip = useCallback(async (
     tripId,
     email,
@@ -257,6 +264,7 @@ export const TripProvider = ({ children }) => {
       getTripById,
       uploadTripImage,
       getTripCollaborators,
+      getTripBuddies,
       shareTrip,
       removeTripCollaborator,
     }}>

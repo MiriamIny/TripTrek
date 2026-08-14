@@ -122,6 +122,8 @@ vi.mock('../context/AuthContext', () => ({
 
     user: { id: mockUserId },
 
+    userAttributes: { email: 'owner@example.com' },
+
     isAuthenticated: true,
 
     login: vi.fn(),
@@ -167,6 +169,10 @@ describe('TripDetail', () => {
     mockTripContext.saveTrip = vi.fn().mockResolvedValue()
 
     mockTripContext.fetchTrips = vi.fn().mockResolvedValue()
+
+    mockTripContext.deleteTrip = vi.fn().mockResolvedValue()
+
+    delete mockTripContext.getTripBuddies
 
   })
  
@@ -256,6 +262,26 @@ describe('TripDetail', () => {
 
     expect(screen.getByText('9:00 AM')).toBeInTheDocument()
 
+  })
+
+  it('shows other trip buddies with their profile details', async () => {
+    mockTripContext.getTripBuddies = vi.fn().mockResolvedValue({
+      owner: { email: 'owner@example.com', name: 'Current Owner', permission: 'owner' },
+      collaborators: [{
+        email: 'alex@example.com',
+        name: 'Alex Rivera',
+        picture: 'https://example.com/alex.jpg',
+        permission: 'editor',
+      }],
+    })
+
+    renderWithProviders(<TripDetail />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Alex Rivera, alex@example.com')).toBeInTheDocument()
+    })
+    expect(screen.queryByLabelText('Current Owner, owner@example.com')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Share Trip' })).toBeInTheDocument()
   })
  
   it('shows "No activities planned" for days with empty activities', async () => {
@@ -449,10 +475,11 @@ describe('TripDetail', () => {
 
     renderWithProviders(<TripDetail />)
 
-    await waitFor(() => expect(screen.getByText('Viewer')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Shared with you')).toBeInTheDocument())
     expect(screen.getByText('Shared by Miriam')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit Trip' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share Trip' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Leave Trip' })).toBeInTheDocument()
   })
 
   it('keeps the local draft open when autosave cannot resolve a conflict', async () => {

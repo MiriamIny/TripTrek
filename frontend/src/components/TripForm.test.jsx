@@ -265,6 +265,37 @@ describe('TripForm', () => {
     });
   });
 
+  it('warns before a date change removes planned itinerary days', async () => {
+    const tripWithPlansOnLastDay = {
+      destination: 'Rome',
+      startDate: '07/20/2025',
+      endDate: '07/21/2025',
+      itinerary: [
+        { date: '07/20/2025', activities: [] },
+        { date: '07/21/2025', activities: [{ time: '9:00 AM', name: 'Colosseum tour' }] },
+      ],
+    };
+    const confirmChange = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+    render(<TripForm trip={tripWithPlansOnLastDay} onSave={vi.fn()} onCancel={vi.fn()} />);
+    const endDateInput = screen.getAllByDisplayValue(/.*/).filter((input) => input.type === 'date')[1];
+
+    fireEvent.change(endDateInput, { target: { value: '2025-07-20' } });
+    expect(confirmChange).toHaveBeenCalledWith(
+      'Changing these dates will remove 1 planned activity from 1 day. Continue?',
+    );
+    expect(endDateInput).toHaveValue('2025-07-21');
+    expect(screen.getByText('Colosseum tour')).toBeInTheDocument();
+
+    fireEvent.change(endDateInput, { target: { value: '2025-07-20' } });
+    await waitFor(() => {
+      expect(endDateInput).toHaveValue('2025-07-20');
+      expect(screen.queryByText('Colosseum tour')).not.toBeInTheDocument();
+    });
+
+    confirmChange.mockRestore();
+  });
+
   it('adds an activity to the itinerary when inputs are valid', async () => {
     render(<TripForm trip={mockTrip} onSave={vi.fn()} onCancel={vi.fn()} />);
    
