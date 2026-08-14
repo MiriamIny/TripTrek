@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Authenticator, IconsProvider, useAuthenticator } from '@aws-amplify/ui-react';
 import {
+  confirmSignUp,
   confirmResetPassword,
+  resendSignUpCode,
   resetPassword,
   signIn,
   signInWithRedirect,
@@ -15,40 +17,6 @@ import logo from '../assets/TrekATripLogo.png';
 import './AuthModal.css';
 
 const getFormFields = (email = '') => ({
-  signUp: {
-    name: {
-      order: 1,
-      label: 'Name',
-      placeholder: ' ',
-      isRequired: true,
-    },
-    email: {
-      order: 2,
-      label: 'Email',
-      placeholder: ' ',
-      defaultValue: email,
-      isReadOnly: true,
-      isRequired: true,
-    },
-    password: {
-      order: 3,
-      label: 'Password',
-      placeholder: ' ',
-      showPasswordButtonLabel: 'Toggle password visibility',
-      passwordIsHiddenLabel: 'Password hidden',
-      passwordIsShownLabel: 'Password revealed',
-      isRequired: true,
-    },
-    confirm_password: {
-      order: 4,
-      label: 'Confirm password',
-      placeholder: ' ',
-      showPasswordButtonLabel: 'Toggle password visibility',
-      passwordIsHiddenLabel: 'Password hidden',
-      passwordIsShownLabel: 'Password revealed',
-      isRequired: true,
-    },
-  },
   signIn: {
     username: {
       label: 'Email',
@@ -98,10 +66,6 @@ function SignInFooter() {
   );
 }
 
-function SignUpFooter() {
-  return null;
-}
-
 const authenticatorComponents = {
   Header() {
     return null;
@@ -111,12 +75,6 @@ const authenticatorComponents = {
       return null;
     },
     Footer: SignInFooter,
-  },
-  SignUp: {
-    Header() {
-      return null;
-    },
-    Footer: SignUpFooter,
   },
 };
 
@@ -164,7 +122,15 @@ function AuthFloatingField({
   );
 }
 
-function AuthPasswordField({ id, label, value, onChange, autoComplete = 'new-password' }) {
+function AuthPasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  autoComplete = 'new-password',
+  showRequirements = false,
+  ...inputProps
+}) {
   const [isRevealed, setIsRevealed] = useState(false);
   const accessibilityLabel = isRevealed
     ? `${label} revealed. Hide ${label.toLowerCase()}`
@@ -174,23 +140,31 @@ function AuthPasswordField({ id, label, value, onChange, autoComplete = 'new-pas
     <AuthFloatingField
       id={id}
       label={label}
-      className="auth-floating-password-field"
+      className={`auth-floating-password-field${showRequirements ? ' auth-floating-password-field--with-requirements' : ''}`}
       type={isRevealed ? 'text' : 'password'}
       autoComplete={autoComplete}
       value={value}
       onChange={onChange}
+      {...inputProps}
       required
       endAdornment={(
-        <button
-          type="button"
-          className="auth-password-toggle"
-          aria-label={accessibilityLabel}
-          title={accessibilityLabel}
-          aria-pressed={isRevealed}
-          onClick={() => setIsRevealed((current) => !current)}
-        >
-          {isRevealed ? <EyeOpenIcon /> : <EyeClosedIcon />}
-        </button>
+        <>
+          {showRequirements && (
+            <span className="auth-password-requirements-control">
+              <PasswordRequirements />
+            </span>
+          )}
+          <button
+            type="button"
+            className="auth-password-toggle"
+            aria-label={accessibilityLabel}
+            title={accessibilityLabel}
+            aria-pressed={isRevealed}
+            onClick={() => setIsRevealed((current) => !current)}
+          >
+            {isRevealed ? <EyeOpenIcon /> : <EyeClosedIcon />}
+          </button>
+        </>
       )}
     />
   );
@@ -371,11 +345,12 @@ function PasswordRequirements() {
   const triggerRef = useRef(null);
   const tooltipRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [portalRoot, setPortalRoot] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({
     left: 12,
     top: 12,
     width: 280,
-    placement: 'right',
+    placement: 'bottom',
   });
 
   useEffect(() => {
@@ -385,32 +360,30 @@ function PasswordRequirements() {
       const trigger = triggerRef.current;
       if (!trigger) return;
 
-      const viewportPadding = 12;
-      const gap = 10;
+      const container = trigger.closest('.auth-email-stage.auth-sign-up-stage');
+      if (!container) return;
+      setPortalRoot(container);
+
+      const containerPadding = 12;
+      const gap = 8;
       const triggerRect = trigger.getBoundingClientRect();
-      const width = Math.min(280, window.innerWidth - viewportPadding * 2);
+      const containerRect = container.getBoundingClientRect();
+      const width = Math.min(280, containerRect.width - containerPadding * 2);
       const tooltipHeight = tooltipRef.current?.getBoundingClientRect().height || 128;
-      const maxLeft = Math.max(viewportPadding, window.innerWidth - viewportPadding - width);
-      const maxTop = Math.max(viewportPadding, window.innerHeight - viewportPadding - tooltipHeight);
+      const maxLeft = Math.max(containerPadding, containerRect.width - containerPadding - width);
+      const maxTop = Math.max(containerPadding, containerRect.height - containerPadding - tooltipHeight);
+      let placement = 'bottom';
+      let left = triggerRect.left - containerRect.left + triggerRect.width / 2 - width / 2;
+      let top = triggerRect.bottom - containerRect.top + gap;
 
-      let placement = 'right';
-      let left = triggerRect.right + gap;
-      let top = triggerRect.top + triggerRect.height / 2 - tooltipHeight / 2;
-
-      if (left + width > window.innerWidth - viewportPadding) {
-        placement = 'bottom';
-        left = Math.min(Math.max(triggerRect.left, viewportPadding), maxLeft);
-        top = triggerRect.bottom + gap;
-
-        if (top + tooltipHeight > window.innerHeight - viewportPadding) {
-          placement = 'top';
-          top = triggerRect.top - gap - tooltipHeight;
-        }
+      if (top + tooltipHeight > containerRect.height - containerPadding) {
+        placement = 'top';
+        top = triggerRect.top - containerRect.top - gap - tooltipHeight;
       }
 
       setTooltipPosition({
-        left: Math.min(Math.max(left, viewportPadding), maxLeft),
-        top: Math.min(Math.max(top, viewportPadding), maxTop),
+        left: Math.min(Math.max(left, containerPadding), maxLeft),
+        top: Math.min(Math.max(top, containerPadding), maxTop),
         width,
         placement,
       });
@@ -470,60 +443,266 @@ function PasswordRequirements() {
           <path d="M12 10.5v6M12 7.5h.01" />
         </svg>
       </button>
-      {createPortal(tooltip, document.body)}
+      {portalRoot && createPortal(tooltip, portalRoot)}
     </div>
   );
 }
 
-function PasswordRequirementsPortal({ containerRef, enabled }) {
-  const [portalHost, setPortalHost] = useState(null);
+const passwordErrorFor = (password) => {
+  const missing = [];
+  if (password.length < 8) missing.push('at least 8 characters');
+  if (!/[A-Z]/.test(password)) missing.push('an uppercase letter');
+  if (!/[a-z]/.test(password)) missing.push('a lowercase letter');
+  if (!/\d/.test(password)) missing.push('a number');
+  if (!/[^A-Za-z0-9]/.test(password)) missing.push('a special character');
+  return missing.length ? `Password needs ${missing.join(', ')}.` : '';
+};
 
-  useEffect(() => {
-    if (!enabled) {
-      setPortalHost(null);
-      return undefined;
+function CreateAccountForm({ email, onBack, onComplete }) {
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmationCode, setConfirmationCode] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState('');
+
+  const setFieldError = (field, message) => {
+    setFieldErrors((current) => ({ ...current, [field]: message }));
+  };
+
+  const clearFieldError = (field) => {
+    setFieldErrors((current) => (current[field] ? { ...current, [field]: '' } : current));
+  };
+
+  const finishSignUp = async () => {
+    const result = await withTimeout(
+      signIn({ username: email, password }),
+      SIGN_IN_TIMEOUT_MS,
+      'Sign in is taking longer than expected. Check your connection and try again.',
+    );
+    if (!result?.isSignedIn && result?.nextStep?.signInStep !== 'DONE') {
+      throw new Error('Your account was created, but sign in needs another step. Please return and sign in.');
     }
+    window.sessionStorage.setItem('trek-a-trip:new-account-welcome', JSON.stringify({
+      email,
+      name: name.trim(),
+    }));
+    onComplete();
+  };
 
-    const container = containerRef.current;
-    if (!container) return undefined;
-    let host;
-
-    const locatePasswordField = () => {
-      const passwordField = container.querySelector('.amplify-passwordfield');
-      const passwordLabel = passwordField?.querySelector('.amplify-label');
-
-      if (!passwordField || !passwordLabel) {
-        setPortalHost(null);
-        return;
-      }
-
-      host = passwordField.querySelector('[data-password-requirements-host]');
-      if (!host) {
-        host = document.createElement('span');
-        host.className = 'password-requirements-host';
-        host.dataset.passwordRequirementsHost = '';
-        passwordLabel.insertAdjacentElement('afterend', host);
-      }
-
-      setPortalHost(host);
+  const submitAccount = async (event) => {
+    event.preventDefault();
+    const nextErrors = {
+      name: name.trim() ? '' : 'Enter your name.',
+      password: passwordErrorFor(password),
+      confirmPassword: !confirmPassword
+        ? 'Confirm your password.'
+        : password === confirmPassword ? '' : 'Passwords do not match.',
     };
+    setFieldErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean) || isSubmitting) return;
 
-    locatePasswordField();
-    const observer = new MutationObserver(locatePasswordField);
-    observer.observe(container, { childList: true, subtree: true });
+    setIsSubmitting(true);
+    setFormError('');
+    try {
+      const result = await signUp({
+        username: email,
+        password,
+        options: {
+          userAttributes: {
+            email,
+            name: name.trim(),
+          },
+        },
+      });
+      if (result?.isSignUpComplete || result?.nextStep?.signUpStep === 'DONE') {
+        await finishSignUp();
+      } else if (result?.nextStep?.signUpStep === 'CONFIRM_SIGN_UP') {
+        setIsConfirming(true);
+      } else {
+        throw new Error('Cognito needs another account-creation step that is not currently supported.');
+      }
+    } catch (error) {
+      console.error('Unable to create account:', error);
+      if (['UsernameExistsException', 'AliasExistsException'].includes(error?.name)) {
+        setFormError('An account already exists for this email. Go back and continue with that email to sign in.');
+      } else {
+        setFormError(error?.message || 'We could not create your account. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    return () => {
-      observer.disconnect();
-      host?.remove();
-    };
-  }, [containerRef, enabled]);
+  const submitConfirmation = async (event) => {
+    event.preventDefault();
+    const codeError = confirmationCode.trim() ? '' : 'Enter the verification code.';
+    setFieldError('confirmationCode', codeError);
+    if (codeError || isSubmitting) return;
 
-  if (!enabled || !portalHost) return null;
+    setIsSubmitting(true);
+    setFormError('');
+    try {
+      await confirmSignUp({ username: email, confirmationCode: confirmationCode.trim() });
+      await finishSignUp();
+    } catch (error) {
+      console.error('Unable to confirm account:', error);
+      setFormError(error?.message || 'We could not verify your email. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  return createPortal(<PasswordRequirements />, portalHost);
+  const resendCode = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setFormError('');
+    try {
+      await resendSignUpCode({ username: email });
+    } catch (error) {
+      console.error('Unable to resend verification code:', error);
+      setFormError(error?.message || 'We could not resend the code. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isConfirming) {
+    return (
+      <>
+        <button
+          type="button"
+          className="auth-back-button auth-back-button--icon"
+          onClick={() => {
+            setIsConfirming(false);
+            setConfirmationCode('');
+            setFieldError('confirmationCode', '');
+            setFormError('');
+          }}
+          aria-label="Back"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6" /></svg>
+        </button>
+        <img src={logo} alt="Trek A Trip" className="auth-logo auth-sign-up-logo" />
+        <h3 className="auth-sign-up-heading">Check your email</h3>
+        <p className="auth-google-account-copy">
+          Enter the verification code sent to <strong>{email}</strong>.
+        </p>
+        <form className="auth-create-account-form" onSubmit={submitConfirmation} noValidate>
+          <AuthFloatingField
+            id="auth-sign-up-code"
+            label="Verification code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            value={confirmationCode}
+            onChange={(event) => setConfirmationCode(event.target.value)}
+            onFocus={() => clearFieldError('confirmationCode')}
+            onBlur={() => setFieldError(
+              'confirmationCode',
+              confirmationCode.trim() ? '' : 'Enter the verification code.',
+            )}
+            aria-invalid={Boolean(fieldErrors.confirmationCode)}
+            aria-describedby={fieldErrors.confirmationCode ? 'auth-sign-up-code-error' : undefined}
+            required
+          />
+          {fieldErrors.confirmationCode && (
+            <p id="auth-sign-up-code-error" className="auth-email-error" role="alert">
+              {fieldErrors.confirmationCode}
+            </p>
+          )}
+          {formError && <p className="auth-email-error" role="alert">{formError}</p>}
+          <button type="submit" className="auth-choice-button auth-email-button" disabled={isSubmitting}>
+            {isSubmitting ? 'Verifying...' : 'Verify email'}
+          </button>
+          <button type="button" className="auth-text-link auth-resend-code" onClick={resendCode} disabled={isSubmitting}>
+            Resend code
+          </button>
+        </form>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="auth-back-button auth-back-button--icon"
+        onClick={onBack}
+        aria-label="Back"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6" /></svg>
+      </button>
+      <img src={logo} alt="Trek A Trip" className="auth-logo auth-sign-up-logo" />
+      <h3 className="auth-sign-up-heading">Get started by creating an account</h3>
+      <form className="auth-create-account-form" onSubmit={submitAccount} noValidate>
+        <AuthFloatingField
+          id="auth-sign-up-name"
+          label="Name"
+          name="name"
+          autoComplete="name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          onFocus={() => clearFieldError('name')}
+          onBlur={() => setFieldError('name', name.trim() ? '' : 'Enter your name.')}
+          aria-invalid={Boolean(fieldErrors.name)}
+          aria-describedby={fieldErrors.name ? 'auth-sign-up-name-error' : undefined}
+          required
+        />
+        {fieldErrors.name && <p id="auth-sign-up-name-error" className="auth-email-error" role="alert">{fieldErrors.name}</p>}
+        <AuthFloatingField
+          id="auth-sign-up-email"
+          label="Email address"
+          name="email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          readOnly
+          aria-readonly="true"
+        />
+        <AuthPasswordField
+          id="auth-sign-up-password"
+          label="Password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          onFocus={() => clearFieldError('password')}
+          onBlur={() => setFieldError('password', passwordErrorFor(password))}
+          aria-invalid={Boolean(fieldErrors.password)}
+          aria-describedby={fieldErrors.password ? 'auth-sign-up-password-error' : undefined}
+          showRequirements
+        />
+        {fieldErrors.password && <p id="auth-sign-up-password-error" className="auth-email-error" role="alert">{fieldErrors.password}</p>}
+        <AuthPasswordField
+          id="auth-sign-up-confirm-password"
+          label="Confirm password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          onFocus={() => clearFieldError('confirmPassword')}
+          onBlur={() => setFieldError(
+            'confirmPassword',
+            !confirmPassword
+              ? 'Confirm your password.'
+              : password === confirmPassword ? '' : 'Passwords do not match.',
+          )}
+          aria-invalid={Boolean(fieldErrors.confirmPassword)}
+          aria-describedby={fieldErrors.confirmPassword ? 'auth-sign-up-confirm-error' : undefined}
+        />
+        {fieldErrors.confirmPassword && (
+          <p id="auth-sign-up-confirm-error" className="auth-email-error" role="alert">
+            {fieldErrors.confirmPassword}
+          </p>
+        )}
+        {formError && <p className="auth-email-error" role="alert">{formError}</p>}
+        <button type="submit" className="auth-choice-button auth-email-button" disabled={isSubmitting}>
+          {isSubmitting ? 'Creating account...' : 'Create Account'}
+        </button>
+      </form>
+    </>
+  );
 }
 
-function AuthenticatorCopy({ containerRef, hideUsername = false, lockEmail = false }) {
+function AuthenticatorCopy({ containerRef }) {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
@@ -540,29 +719,16 @@ function AuthenticatorCopy({ containerRef, hideUsername = false, lockEmail = fal
       if (submitButton && submitButton.textContent?.trim() === 'Sign in') {
         submitButton.textContent = 'Sign in';
       }
-      const usernameInput = signInForm?.querySelector('input[name="username"]');
-      const usernameField = usernameInput?.closest('.amplify-field');
-      if (hideUsername && usernameField) usernameField.classList.add('auth-prefilled-email-field');
-
       const passwordInput = signInForm?.querySelector('input[name="password"]');
       const passwordField = passwordInput?.closest('.amplify-passwordfield');
       if (passwordField) passwordField.classList.add('auth-inline-password-field');
-
-      const signUpEmailInput = container.querySelector(
-        'form[data-amplify-form][data-amplify-authenticator-signup] input[name="email"]',
-      );
-      if (lockEmail && signUpEmailInput) {
-        signUpEmailInput.readOnly = true;
-        signUpEmailInput.setAttribute('aria-readonly', 'true');
-        signUpEmailInput.closest('.amplify-field')?.classList.add('auth-verified-email-field');
-      }
     };
 
     updateCopy();
     const observer = new MutationObserver(updateCopy);
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [containerRef, hideUsername, lockEmail]);
+  }, [containerRef]);
 
   return null;
 }
@@ -571,11 +737,9 @@ export default function AuthModal() {
   const { isAuthModalOpen, closeAuth } = useAuth();
   const authenticatorNavigation = useAuthenticator((context) => [
     context.toSignIn,
-    context.toSignUp,
     context.toForgotPassword,
   ]);
   const toSignIn = authenticatorNavigation?.toSignIn;
-  const toSignUp = authenticatorNavigation?.toSignUp;
   const toForgotPassword = authenticatorNavigation?.toForgotPassword;
   const [authStage, setAuthStage] = useState('choice');
   const [showPassword, setShowPassword] = useState(false);
@@ -609,7 +773,6 @@ export default function AuthModal() {
   }, [isAuthModalOpen, toSignIn]);
 
   const openSignUp = () => {
-    toSignUp?.();
     setAuthStage('signUp');
     setEmailError('');
     setSuccessMessage('');
@@ -723,24 +886,6 @@ export default function AuthModal() {
   };
 
   const services = {
-    async handleSignUp(input) {
-      try {
-        const result = await signUp(input);
-        const enteredName = input?.options?.userAttributes?.name || input?.attributes?.name || '';
-        window.sessionStorage.setItem('trek-a-trip:new-account-welcome', JSON.stringify({
-          email: checkedEmail,
-          name: enteredName.trim(),
-        }));
-        return result;
-      } catch (error) {
-        if (['UsernameExistsException', 'AliasExistsException'].includes(error?.name)) {
-          throw new Error(
-            'An account already exists for this email. Go back and continue with that email to sign in.',
-          );
-        }
-        throw error;
-      }
-    },
     async handleSignIn(input) {
       try {
         return await signIn(input);
@@ -801,35 +946,13 @@ export default function AuthModal() {
             <AuthenticatorCopy containerRef={authContentRef} />
           </div>
         ) : authStage === 'signUp' ? (
-          <div className="auth-email-stage auth-sign-up-stage" ref={authContentRef}>
-            <button
-              type="button"
-              className="auth-back-button auth-back-button--icon"
-              onClick={returnToChoice}
-              aria-label="Back"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m14.5 6-6 6 6 6" />
-              </svg>
-            </button>
-            <img src={logo} alt="Trek A Trip" className="auth-logo auth-sign-up-logo" />
-            <h3 className="auth-sign-up-heading">Get started by creating an account</h3>
-            <IconsProvider icons={passwordIcons}>
-              <Authenticator
-                key={`sign-up-${checkedEmail}`}
-                initialState="signUp"
-                loginMechanisms={['email']}
-                signUpAttributes={['name']}
-                formFields={getFormFields(checkedEmail)}
-                components={authenticatorComponents}
-                services={services}
-              />
-            </IconsProvider>
-            <PasswordRequirementsPortal
-              containerRef={authContentRef}
-              enabled
+          <div className="auth-email-stage auth-sign-up-stage">
+            <CreateAccountForm
+              key={`create-account-${checkedEmail}`}
+              email={checkedEmail}
+              onBack={returnToChoice}
+              onComplete={closeAuth}
             />
-            <AuthenticatorCopy containerRef={authContentRef} lockEmail />
           </div>
         ) : (
           <section className="auth-choice" aria-label="Sign in options">
