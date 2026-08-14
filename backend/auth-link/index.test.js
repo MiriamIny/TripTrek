@@ -8,10 +8,12 @@ vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
   AdminCreateUserCommand: class AdminCreateUserCommand { constructor(input) { this.input = input; this.kind = 'create' } },
   AdminSetUserPasswordCommand: class AdminSetUserPasswordCommand { constructor(input) { this.input = input; this.kind = 'password' } },
   AdminLinkProviderForUserCommand: class AdminLinkProviderForUserCommand { constructor(input) { this.input = input; this.kind = 'link' } },
+  AdminUpdateUserAttributesCommand: class AdminUpdateUserAttributesCommand { constructor(input) { this.input = input; this.kind = 'update' } },
 }))
 vi.mock('@aws-sdk/client-dynamodb', () => ({ DynamoDBClient: vi.fn() }))
 vi.mock('@aws-sdk/lib-dynamodb', () => ({
   DynamoDBDocumentClient: { from: vi.fn(() => ({ send: dbSend })) },
+  GetCommand: class GetCommand { constructor(input) { this.input = input; this.kind = 'get' } },
   UpdateCommand: class UpdateCommand { constructor(input) { this.input = input; this.kind = 'state' } },
 }))
 
@@ -47,7 +49,7 @@ describe('Cognito account linker', () => {
     const event = googleEvent()
     await expect(handler(event)).resolves.toBe(event)
 
-    expect(send).toHaveBeenCalledTimes(2)
+    expect(send).toHaveBeenCalledTimes(3)
     expect(send.mock.calls[1][0].input).toMatchObject({
       DestinationUser: { ProviderName: 'Cognito', ProviderAttributeValue: 'native-sub' },
       SourceUser: {
@@ -56,7 +58,7 @@ describe('Cognito account linker', () => {
         ProviderAttributeValue: 'google-subject',
       },
     })
-    expect(dbSend.mock.calls[0][0].input.ExpressionAttributeValues).toMatchObject({
+    expect(dbSend.mock.calls[1][0].input.ExpressionAttributeValues).toMatchObject({
       ':passwordEnabled': true,
       ':mergeNoticePending': true,
     })
@@ -71,13 +73,13 @@ describe('Cognito account linker', () => {
 
     await handler(googleEvent())
 
-    expect(send.mock.calls.map(([command]) => command.kind)).toEqual(['list', 'create', 'password', 'link'])
+    expect(send.mock.calls.map(([command]) => command.kind)).toEqual(['list', 'create', 'password', 'link', 'update'])
     expect(send.mock.calls[1][0].input).toMatchObject({
       Username: 'traveler@example.com',
       MessageAction: 'SUPPRESS',
     })
     expect(send.mock.calls[2][0].input).toMatchObject({ Permanent: true })
-    expect(dbSend.mock.calls[0][0].input.ExpressionAttributeValues).toMatchObject({
+    expect(dbSend.mock.calls[1][0].input.ExpressionAttributeValues).toMatchObject({
       ':passwordEnabled': false,
       ':mergeNoticePending': false,
     })

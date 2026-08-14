@@ -155,21 +155,6 @@ const passwordIcons = {
   },
 };
 
-const authenticatorServices = {
-  async handleSignUp(input) {
-    try {
-      return await signUp(input);
-    } catch (error) {
-      if (['UsernameExistsException', 'AliasExistsException'].includes(error?.name)) {
-        throw new Error(
-          'An account already exists for this email. Continue with Google, or choose Sign in and Forgot your password to add an email password.',
-        );
-      }
-      throw error;
-    }
-  },
-};
-
 const inlineSignInComponents = {
   Header() {
     return null;
@@ -474,9 +459,11 @@ export default function AuthModal() {
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
   const [email, setEmail] = useState('');
+  const [checkedEmail, setCheckedEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const authContentRef = useRef(null);
+  const lookupRequestRef = useRef(0);
 
   const openSignUp = () => {
     setAuthStage('signUp');
@@ -486,8 +473,10 @@ export default function AuthModal() {
   };
 
   const returnToChoice = () => {
+    lookupRequestRef.current += 1;
     setAuthStage('choice');
     setShowPassword(false);
+    setCheckedEmail('');
     setEmailError('');
     setSuccessMessage('');
   };
@@ -511,12 +500,14 @@ export default function AuthModal() {
   };
 
   const handleClose = () => {
+    lookupRequestRef.current += 1;
     setAuthStage('choice');
     setShowPassword(false);
     setIsGoogleLoading(false);
     setIsEmailLoading(false);
     setGoogleError('');
     setEmailError('');
+    setCheckedEmail('');
     setSuccessMessage('');
     closeAuth();
   };
@@ -534,6 +525,8 @@ export default function AuthModal() {
     setEmailError('');
     setSuccessMessage('');
     setIsEmailLoading(true);
+    const requestId = lookupRequestRef.current + 1;
+    lookupRequestRef.current = requestId;
 
     try {
       const response = await publicTripApiFetch('accountLookup', {
@@ -542,6 +535,8 @@ export default function AuthModal() {
         body: JSON.stringify({ email: normalizedEmail }),
       });
       const { accountType } = await response.json();
+      if (requestId !== lookupRequestRef.current) return;
+      setCheckedEmail(normalizedEmail);
 
       if (accountType === 'none') {
         openSignUp();
@@ -563,12 +558,29 @@ export default function AuthModal() {
       console.error('Unable to continue with email:', error);
       setEmailError(error?.message || 'We could not check that email. Please try again.');
     } finally {
-      setIsEmailLoading(false);
+      if (requestId === lookupRequestRef.current) setIsEmailLoading(false);
     }
   };
 
   const services = {
-    ...authenticatorServices,
+    async handleSignUp(input) {
+      try {
+        const result = await signUp(input);
+        const enteredName = input?.options?.userAttributes?.name || input?.attributes?.name || '';
+        window.sessionStorage.setItem('trek-a-trip:new-account-welcome', JSON.stringify({
+          email: checkedEmail,
+          name: enteredName.trim(),
+        }));
+        return result;
+      } catch (error) {
+        if (['UsernameExistsException', 'AliasExistsException'].includes(error?.name)) {
+          throw new Error(
+            'An account already exists for this email. Go back and continue with that email to sign in.',
+          );
+        }
+        throw error;
+      }
+    },
     async handleSignIn(input) {
       try {
         return await signIn(input);
@@ -596,7 +608,7 @@ export default function AuthModal() {
       <Modal.Body>
         {authStage === 'googlePassword' ? (
           <GooglePasswordSetup
-            email={email}
+            email={checkedEmail}
             onBack={returnToChoice}
             onComplete={() => {
               setSuccessMessage('Password added. You are now signed in.');
@@ -618,11 +630,11 @@ export default function AuthModal() {
             <h3 className="auth-sign-up-heading">Get started by creating an account</h3>
             <IconsProvider icons={passwordIcons}>
               <Authenticator
-                key={`sign-up-${email}`}
+                key={`sign-up-${checkedEmail}`}
                 initialState="signUp"
                 loginMechanisms={['email']}
                 signUpAttributes={['name']}
-                formFields={getFormFields(email)}
+                formFields={getFormFields(checkedEmail)}
                 components={authenticatorComponents}
                 services={services}
               />
@@ -662,8 +674,11 @@ export default function AuthModal() {
                   aria-describedby={emailError ? 'auth-email-error' : undefined}
                   aria-invalid={Boolean(emailError)}
                   onChange={(event) => {
+                    lookupRequestRef.current += 1;
                     setEmail(event.target.value);
+                    setIsEmailLoading(false);
                     if (showPassword) setShowPassword(false);
+                    if (checkedEmail) setCheckedEmail('');
                     if (emailError) setEmailError('');
                   }}
                 />
@@ -687,10 +702,10 @@ export default function AuthModal() {
               <div className="auth-inline-sign-in" ref={authContentRef}>
                 <IconsProvider icons={passwordIcons}>
                   <Authenticator
-                    key={`sign-in-${email}`}
+                    key={`sign-in-${checkedEmail}`}
                     initialState="signIn"
                     loginMechanisms={['email']}
-                    formFields={getFormFields(email)}
+                    formFields={getFormFields(checkedEmail)}
                     components={inlineSignInComponents}
                     services={services}
                   />

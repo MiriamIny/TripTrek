@@ -29,6 +29,8 @@ const escapeFilterValue = (value) => value.replaceAll('\\', '\\\\').replaceAll('
 const linkedProviders = (users) => {
   const providers = new Set()
   for (const user of users) {
+    const usernameProvider = String(user.Username || '').split('_', 1)[0].toLowerCase()
+    if (usernameProvider === 'google') providers.add('google')
     const identities = attributeValue(user, 'identities')
     if (!identities) continue
     try {
@@ -42,19 +44,107 @@ const linkedProviders = (users) => {
   return providers
 }
 
-const hasEnabledPassword = async (email) => {
+const passwordState = async (email) => {
   const result = await dynamo.send(new GetCommand({
     TableName: process.env.AUTH_TABLE_NAME,
     Key: { pk: accountKey(email), sk: 'AUTH' },
     ConsistentRead: true,
   }))
-  return result.Item?.passwordEnabled === true
+  return typeof result.Item?.passwordEnabled === 'boolean'
+    ? result.Item.passwordEnabled
+    : null
 }
+
+const userId = (user) => attributeValue(user, 'sub') || user?.Username || ''
+const isNativeProfile = (user) => !String(user?.Username || '').toLowerCase().startsWith('google_')
+const isGoogleProfile = (user) => (
+  String(user?.Username || '').toLowerCase().startsWith('google_')
+  || (() => {
+    try {
+      return JSON.parse(attributeValue(user, 'identities') || '[]')
+        .some((identity) => identity?.providerName?.toLowerCase() === 'google')
+    } catch {
+      return false
+    }
+  })()
+)
+
+const reconcileAccountOwners = async (email) => {
+  const result = await cognito.send(new ListUsersCommand({
+    UserPoolId: process.env.COGNITO_USER_POOL_ID,
+    Filter: `email = "${escapeFilterValue(email)}"`,
+    Limit: 20,
+  }))
+  const users = result.Users || []
+  const ownerIds = [...new Set(users.map(userId).filter(Boolean))]
+  const canonicalOwnerId = userId(users
+    .filter(isNativeProfile)
+    .sort((left, right) => {
+      const confirmedDifference = Number(right.UserStatus === 'CONFIRMED') - Number(left.UserStatus === 'CONFIRMED')
+      if (confirmedDifference) return confirmedDifference
+      return new Date(left.UserCreateDate || 0) - new Date(right.UserCreateDate || 0)
+    })[0]) || ownerIds[0] || ''
+  const googleProfile = users.find((user) => (
+    String(user?.Username || '').toLowerCase().startsWith('google_')
+  )) || users.find(isGoogleProfile)
+  const preferredName = attributeValue(googleProfile, 'name')
+  const preferredPicture = attributeValue(googleProfile, 'picture')
+  const current = await dynamo.send(new GetCommand({
+    TableName: process.env.AUTH_TABLE_NAME,
+    Key: { pk: accountKey(email), sk: 'AUTH' },
+    ConsistentRead: true,
+  }))
+  if (ownerIds.length) {
+    const names = { '#ownerIds': 'ownerIds', '#canonicalOwnerId': 'canonicalOwnerId' }
+    const values = {
+      ':ownerIds': ownerIds,
+      ':canonicalOwnerId': canonicalOwnerId,
+      ':reconciledAt': new Date().toISOString(),
+    }
+    const assignments = [
+      '#ownerIds = :ownerIds',
+      '#canonicalOwnerId = :canonicalOwnerId',
+      'reconciledAt = :reconciledAt',
+    ]
+    if (preferredName) {
+      names['#preferredName'] = 'preferredName'
+      values[':preferredName'] = preferredName
+      assignments.push('#preferredName = :preferredName')
+    }
+    if (preferredPicture) {
+      names['#preferredPicture'] = 'preferredPicture'
+      values[':preferredPicture'] = preferredPicture
+      assignments.push('#preferredPicture = :preferredPicture')
+    }
+    const legacyMerge = users.some(isNativeProfile)
+      && users.some(isGoogleProfile)
+      && !current.Item?.mergeRecordedAt
+      && !current.Item?.linkedAt
+    if (legacyMerge) {
+      values[':pending'] = true
+      values[':mergeRecordedAt'] = new Date().toISOString()
+      assignments.push('mergeNoticePending = :pending', 'mergeRecordedAt = :mergeRecordedAt')
+    }
+    await dynamo.send(new UpdateCommand({
+      TableName: process.env.AUTH_TABLE_NAME,
+      Key: { pk: accountKey(email), sk: 'AUTH' },
+      UpdateExpression: `SET ${assignments.join(', ')}`,
+      ExpressionAttributeNames: names,
+      ExpressionAttributeValues: values,
+    }))
+  }
+}
+
+const profileFrom = (item) => ({
+  ...(item?.preferredName ? { name: item.preferredName } : {}),
+  ...(item?.preferredPicture ? { picture: item.preferredPicture } : {}),
+})
 
 const markPasswordEnabled = async (event) => {
   const claims = event.requestContext?.authorizer?.jwt?.claims || {}
   const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
-  if (!EMAIL_PATTERN.test(email)) return response(403, { message: 'A verified account is required.' })
+  const verified = claims.email_verified === true || claims.email_verified === 'true'
+  if (!EMAIL_PATTERN.test(email) || !verified) return response(403, { message: 'A verified account is required.' })
 
   await dynamo.send(new UpdateCommand({
     TableName: process.env.AUTH_TABLE_NAME,
@@ -71,7 +161,10 @@ const markPasswordEnabled = async (event) => {
 const consumeMergeNotice = async (event) => {
   const claims = event.requestContext?.authorizer?.jwt?.claims || {}
   const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
-  if (!EMAIL_PATTERN.test(email)) return response(403, { message: 'A verified account is required.' })
+  const verified = claims.email_verified === true || claims.email_verified === 'true'
+  if (!EMAIL_PATTERN.test(email) || !verified) return response(403, { message: 'A verified account is required.' })
+
+  await reconcileAccountOwners(email)
 
   const key = { pk: accountKey(email), sk: 'AUTH' }
   const current = await dynamo.send(new GetCommand({
@@ -79,21 +172,30 @@ const consumeMergeNotice = async (event) => {
     Key: key,
     ConsistentRead: true,
   }))
-  if (current.Item?.mergeNoticePending !== true) {
-    return response(200, { merged: false })
-  }
+  const notice = current.Item?.mergeNoticePending === true
+    ? 'merged'
+    : current.Item?.welcomeNoticePending === true ? 'welcome' : null
+  if (!notice) return response(200, { merged: false, notice: null, profile: profileFrom(current.Item) })
+  const field = notice === 'merged' ? 'mergeNoticePending' : 'welcomeNoticePending'
 
   try {
     await dynamo.send(new UpdateCommand({
       TableName: process.env.AUTH_TABLE_NAME,
       Key: key,
-      UpdateExpression: 'SET mergeNoticePending = :consumed',
-      ConditionExpression: 'mergeNoticePending = :pending',
+      UpdateExpression: 'SET #notice = :consumed',
+      ConditionExpression: '#notice = :pending',
+      ExpressionAttributeNames: { '#notice': field },
       ExpressionAttributeValues: { ':pending': true, ':consumed': false },
     }))
-    return response(200, { merged: true })
+    return response(200, {
+      merged: notice === 'merged',
+      notice,
+      profile: profileFrom(current.Item),
+    })
   } catch (error) {
-    if (error?.name === 'ConditionalCheckFailedException') return response(200, { merged: false })
+    if (error?.name === 'ConditionalCheckFailedException') {
+      return response(200, { merged: false, notice: null, profile: profileFrom(current.Item) })
+    }
     throw error
   }
 }
@@ -166,7 +268,11 @@ export const handler = async (event) => {
     if (users.length === 0) return response(200, { accountType: 'none' })
 
     const providers = linkedProviders(users)
-    if (providers.has('google') && await hasEnabledPassword(email)) {
+    const enabledPassword = providers.has('google') ? await passwordState(email) : null
+    // A missing marker means the profile predates this feature. Existing native
+    // profiles historically had a password, so only an explicit false value is
+    // treated as Google-only.
+    if (providers.has('google') && enabledPassword !== false && users.some(isNativeProfile)) {
       return response(200, { accountType: 'password' })
     }
     return response(200, {

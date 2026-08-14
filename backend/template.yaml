@@ -64,6 +64,7 @@ Resources:
                 - cognito-idp:AdminCreateUser
                 - cognito-idp:AdminSetUserPassword
                 - cognito-idp:AdminLinkProviderForUser
+                - cognito-idp:AdminUpdateUserAttributes
               Resource: !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
 
   CognitoAccountLinkerPermission:

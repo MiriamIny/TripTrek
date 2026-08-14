@@ -11,6 +11,8 @@ export const AuthProvider = ({ children }) => {
     context.authStatus,
   ]);
   const [userAttributes, setUserAttributes] = useState(user?.attributes || {});
+  const [linkedProfile, setLinkedProfile] = useState({});
+  const [accountReady, setAccountReady] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authNotice, setAuthNotice] = useState(null);
   const [mergeNotice, setMergeNotice] = useState(null);
@@ -67,25 +69,40 @@ export const AuthProvider = ({ children }) => {
     if (!isAuthenticated) {
       setMergeNotice(null);
       setMergeNoticeChecked(false);
+      setLinkedProfile({});
+      setAccountReady(false);
       return () => { isCurrent = false; };
     }
 
     setMergeNotice(null);
     setMergeNoticeChecked(false);
+    setLinkedProfile({});
+    setAccountReady(false);
     tripApiFetch('accountLookup')
       .then((response) => response.json())
       .then((payload) => {
-        if (isCurrent && payload.merged === true) {
+        if (isCurrent && payload.profile && typeof payload.profile === 'object') {
+          setLinkedProfile(payload.profile);
+        }
+        if (isCurrent && (payload.merged === true || payload.notice === 'merged')) {
           setMergeNotice({
             title: 'Your accounts are connected',
             message: 'Google and email sign-in now open the same Trek A Trip account.',
           });
+        } else if (isCurrent && payload.notice === 'welcome') {
+          setMergeNotice({ title: 'Welcome!' });
         }
-        if (isCurrent) setMergeNoticeChecked(true);
+        if (isCurrent) {
+          setMergeNoticeChecked(true);
+          setAccountReady(true);
+        }
       })
       .catch((error) => {
         console.warn('Unable to check the one-time account-link notice:', error);
-        if (isCurrent) setMergeNoticeChecked(true);
+        if (isCurrent) {
+          setMergeNoticeChecked(true);
+          setAccountReady(true);
+        }
       });
 
     return () => { isCurrent = false; };
@@ -107,21 +124,34 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (!isAuthenticated || !mergeNoticeChecked || !welcomePendingRef.current) return;
 
+    const storedWelcome = (() => {
+      try {
+        return JSON.parse(window.sessionStorage.getItem('trek-a-trip:new-account-welcome') || 'null');
+      } catch {
+        return null;
+      }
+    })();
+    const effectiveAttributes = { ...userAttributes, ...linkedProfile };
+    const accountEmail = (effectiveAttributes.email || '').trim().toLowerCase();
+    const isNewAccount = storedWelcome?.email === accountEmail;
+    if (isNewAccount) window.sessionStorage.removeItem('trek-a-trip:new-account-welcome');
     const displayName = (
-      userAttributes.name
+      (isNewAccount && storedWelcome.name)
+      || effectiveAttributes.name
       || user?.attributes?.name
-      || userAttributes.email
+      || effectiveAttributes.email
       || user?.signInDetails?.loginId
       || ''
     ).trim();
     if (!displayName) return;
 
-    const firstName = displayName.includes('@')
-      ? displayName.split('@')[0]
-      : displayName.split(/\s+/)[0];
+    const welcomeName = displayName.includes('@') ? displayName.split('@')[0] : displayName;
     welcomePendingRef.current = false;
-    setAuthNotice(mergeNotice || { title: `Welcome back, ${firstName}!` });
-  }, [isAuthenticated, mergeNotice, mergeNoticeChecked, user, userAttributes]);
+    const fallbackNotice = { title: `${isNewAccount ? 'Welcome' : 'Welcome back'}, ${welcomeName}!` };
+    setAuthNotice(mergeNotice?.title === 'Welcome!'
+      ? { title: `Welcome, ${welcomeName}!` }
+      : mergeNotice || fallbackNotice);
+  }, [isAuthenticated, linkedProfile, mergeNotice, mergeNoticeChecked, user, userAttributes]);
 
   const signOut = async () => {
     await amplifySignOut();
@@ -134,7 +164,8 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
-        userAttributes,
+        userAttributes: { ...userAttributes, ...linkedProfile },
+        accountReady,
         signOut,
         authStatus,
         isAuthenticated,

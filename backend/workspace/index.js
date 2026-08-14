@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
 
@@ -11,6 +12,7 @@ const headers = {
 }
 const response = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) })
 const workspaceKey = (ownerId, tripId) => ({ pk: ownerId, sk: `WORKSPACE#${tripId}` })
+const accountKey = (email) => `ACCOUNT#${createHash('sha256').update(email).digest('hex')}`
 
 const normalizeList = (value, limit) => {
   if (!Array.isArray(value) || value.length > limit) return null
@@ -26,13 +28,22 @@ const normalizeList = (value, limit) => {
   return normalized
 }
 
-const getAccess = async ({ userId, email, ownerId, tripId }) => {
+const getAccess = async ({ claims, userId, email, ownerId, tripId }) => {
   const trip = await db.send(new GetCommand({
     TableName: TABLE_NAME,
     Key: { pk: ownerId, sk: tripId },
   }))
   if (!trip.Item) return null
   if (ownerId === userId) return 'owner'
+  const verified = claims.email_verified === true || claims.email_verified === 'true'
+  if (email && verified) {
+    const account = await db.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: { pk: accountKey(email), sk: 'AUTH' },
+      ConsistentRead: true,
+    }))
+    if (Array.isArray(account.Item?.ownerIds) && account.Item.ownerIds.includes(ownerId)) return 'owner'
+  }
   if (!email) return null
   const invite = await db.send(new GetCommand({
     TableName: TABLE_NAME,
@@ -53,7 +64,7 @@ export const handler = async (event) => {
   if (!tripId) return response(400, { message: 'A trip ID is required.' })
 
   try {
-    const access = await getAccess({ userId, email, ownerId, tripId })
+    const access = await getAccess({ claims, userId, email, ownerId, tripId })
     if (!access) return response(404, { message: 'Trip not found.' })
 
     if (method === 'GET') {

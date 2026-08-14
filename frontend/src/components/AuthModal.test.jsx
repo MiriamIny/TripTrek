@@ -224,7 +224,23 @@ describe('AuthModal', () => {
     signUp.mockRejectedValueOnce(error);
 
     await expect(services.handleSignUp({ username: 'miriam@example.com' })).rejects.toThrow(
-      /Continue with Google.*Forgot your password/,
+      /Go back and continue with that email/,
     );
+  });
+
+  it('checks the newly typed email after returning from account creation', async () => {
+    render(<AuthModal />);
+    await openSignUpForUnknownEmail();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Email address' }), {
+      target: { value: 'different@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with email' }));
+
+    await waitFor(() => expect(publicTripApiFetch).toHaveBeenLastCalledWith(
+      'accountLookup',
+      expect.objectContaining({ body: JSON.stringify({ email: 'different@example.com' }) }),
+    ));
   });
 });

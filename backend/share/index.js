@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import {
   DynamoDBDocumentClient,
@@ -23,6 +24,7 @@ const validEmail = (email) => email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$
 const normalizeMessage = (value) => typeof value === 'string' ? value.trim() : ''
 const tripKey = (ownerId, tripId) => `TRIP#${ownerId}#${tripId}`
 const PERMISSIONS = new Set(['editor', 'viewer'])
+const accountKey = (email) => `ACCOUNT#${createHash('sha256').update(email).digest('hex')}`
 const escapeHtml = (value) => String(value || '')
   .replaceAll('&', '&amp;')
   .replaceAll('<', '&lt;')
@@ -34,6 +36,19 @@ const getOwnedTrip = (ownerId, tripId) => db.send(new GetCommand({
   TableName: TABLE_NAME,
   Key: { pk: ownerId, sk: tripId },
 }))
+
+const canManageOwnerId = async (claims, ownerId) => {
+  if (ownerId === claims.sub) return true
+  const email = normalizeEmail(claims.email)
+  const verified = claims.email_verified === true || claims.email_verified === 'true'
+  if (!email || !verified) return false
+  const account = await db.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: { pk: accountKey(email), sk: 'AUTH' },
+    ConsistentRead: true,
+  }))
+  return Array.isArray(account.Item?.ownerIds) && account.Item.ownerIds.includes(ownerId)
+}
 
 const sendInvitation = ({
   email,
@@ -96,6 +111,7 @@ export const handler = async (event) => {
       return response(400, { message: 'Invalid JSON body.' })
     }
     const tripId = body?.tripId
+    const ownerId = body?.ownerId || userId
     const email = normalizeEmail(body?.email)
     const permission = body?.permission || 'editor'
     const sendEmail = body?.sendEmail !== false
@@ -114,13 +130,16 @@ export const handler = async (event) => {
     }
 
     try {
-      const trip = await getOwnedTrip(userId, tripId)
+      if (!(await canManageOwnerId(claims, ownerId))) {
+        return response(403, { message: 'Only the trip owner can manage sharing.' })
+      }
+      const trip = await getOwnedTrip(ownerId, tripId)
       if (!trip.Item) return response(404, { message: 'Trip not found.' })
 
       const createdAt = new Date().toISOString()
       const invite = {
         entityType: 'TRIP_INVITE',
-        ownerId: userId,
+        ownerId,
         tripId,
         email,
         permission,
@@ -132,20 +151,20 @@ export const handler = async (event) => {
         {
           ConditionCheck: {
             TableName: TABLE_NAME,
-            Key: { pk: userId, sk: tripId },
+            Key: { pk: ownerId, sk: tripId },
             ConditionExpression: 'attribute_exists(pk) AND attribute_exists(sk)',
           },
         },
         {
           Put: {
             TableName: TABLE_NAME,
-            Item: { ...invite, pk: `INVITEE#${email}`, sk: tripKey(userId, tripId) },
+            Item: { ...invite, pk: `INVITEE#${email}`, sk: tripKey(ownerId, tripId) },
           },
         },
         {
           Put: {
             TableName: TABLE_NAME,
-            Item: { ...invite, pk: tripKey(userId, tripId), sk: `COLLABORATOR#${email}` },
+            Item: { ...invite, pk: tripKey(ownerId, tripId), sk: `COLLABORATOR#${email}` },
           },
         },
       ] }))
@@ -176,16 +195,21 @@ export const handler = async (event) => {
   }
 
   const tripId = event?.queryStringParameters?.tripId
+  const requestedOwnerId = event?.queryStringParameters?.ownerId
+  const managedOwnerId = requestedOwnerId || userId
   if (!tripId) return response(400, { message: 'A trip ID is required.' })
 
   if (method === 'GET') {
     try {
-      const trip = await getOwnedTrip(userId, tripId)
+      if (!(await canManageOwnerId(claims, managedOwnerId))) {
+        return response(403, { message: 'Only the trip owner can manage sharing.' })
+      }
+      const trip = await getOwnedTrip(managedOwnerId, tripId)
       if (!trip.Item) return response(403, { message: 'Only the trip owner can manage sharing.' })
       const result = await db.send(new QueryCommand({
         TableName: TABLE_NAME,
         KeyConditionExpression: 'pk = :trip',
-        ExpressionAttributeValues: { ':trip': tripKey(userId, tripId) },
+        ExpressionAttributeValues: { ':trip': tripKey(managedOwnerId, tripId) },
       }))
       return response(200, (result.Items || []).map(({ email, permission, createdAt }) => ({
         email, permission, createdAt,
@@ -197,9 +221,9 @@ export const handler = async (event) => {
   }
 
   if (method === 'DELETE') {
-    const requestedOwnerId = event?.queryStringParameters?.ownerId
-    const leavingSharedTrip = requestedOwnerId && requestedOwnerId !== userId
-    const ownerId = leavingSharedTrip ? requestedOwnerId : userId
+    const ownsRequestedId = await canManageOwnerId(claims, managedOwnerId)
+    const leavingSharedTrip = requestedOwnerId && !ownsRequestedId
+    const ownerId = requestedOwnerId || userId
     const email = leavingSharedTrip
       ? callerEmail
       : normalizeEmail(event?.queryStringParameters?.email)
@@ -207,7 +231,7 @@ export const handler = async (event) => {
 
     try {
       if (!leavingSharedTrip) {
-        const trip = await getOwnedTrip(userId, tripId)
+        const trip = await getOwnedTrip(ownerId, tripId)
         if (!trip.Item) return response(403, { message: 'Only the trip owner can remove collaborators.' })
       }
       await db.send(new TransactWriteCommand({ TransactItems: [

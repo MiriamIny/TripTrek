@@ -56,6 +56,11 @@ describe('accountLookup handler', () => {
     cognitoSend.mockResolvedValue({
       Users: [user([{ providerName: 'Google', userId: 'google-sub' }])],
     })
+    dynamoSend.mockImplementation((command) => (
+      command.kind === 'get'
+        ? Promise.resolve({ Item: { passwordEnabled: false } })
+        : Promise.resolve({})
+    ))
     const { handler } = await import('./index.js')
     const result = await handler(request('miriam@example.com'))
     expect(JSON.parse(result.body)).toEqual({ accountType: 'google' })
@@ -75,12 +80,21 @@ describe('accountLookup handler', () => {
     expect(JSON.parse(result.body)).toEqual({ accountType: 'password' })
   })
 
+  it('routes a linked profile created before password markers existed to normal sign-in', async () => {
+    cognitoSend.mockResolvedValue({
+      Users: [user([{ providerName: 'Google', userId: 'google-sub' }])],
+    })
+    const { handler } = await import('./index.js')
+    const result = await handler(request('miriam@example.com'))
+    expect(JSON.parse(result.body)).toEqual({ accountType: 'password' })
+  })
+
   it('records password setup only from the authenticated email claim', async () => {
     const { handler } = await import('./index.js')
     const result = await handler({
       requestContext: {
         http: { method: 'PATCH' },
-        authorizer: { jwt: { claims: { email: 'Miriam@Example.com' } } },
+        authorizer: { jwt: { claims: { email: 'Miriam@Example.com', email_verified: 'true' } } },
       },
     })
     expect(result.statusCode).toBe(204)
@@ -93,26 +107,32 @@ describe('accountLookup handler', () => {
   })
 
   it('returns and consumes a pending merge notice only once', async () => {
+    cognitoSend.mockResolvedValue({ Users: [user()] })
     dynamoSend
+      .mockResolvedValueOnce({ Item: { linkedAt: 'already-recorded' } })
+      .mockResolvedValueOnce({})
       .mockResolvedValueOnce({ Item: { mergeNoticePending: true } })
       .mockResolvedValueOnce({})
     const { handler } = await import('./index.js')
     const event = {
       requestContext: {
         http: { method: 'GET' },
-        authorizer: { jwt: { claims: { email: 'miriam@example.com' } } },
+        authorizer: { jwt: { claims: { email: 'miriam@example.com', email_verified: 'true' } } },
       },
     }
     const result = await handler(event)
-    expect(JSON.parse(result.body)).toEqual({ merged: true })
-    expect(dynamoSend.mock.calls[1][0].input).toMatchObject({
-      ConditionExpression: 'mergeNoticePending = :pending',
+    expect(JSON.parse(result.body)).toMatchObject({ merged: true, notice: 'merged' })
+    expect(dynamoSend.mock.calls[3][0].input).toMatchObject({
+      ConditionExpression: '#notice = :pending',
       ExpressionAttributeValues: { ':pending': true, ':consumed': false },
     })
 
-    dynamoSend.mockReset().mockResolvedValueOnce({ Item: { mergeNoticePending: false } })
+    dynamoSend.mockReset()
+      .mockResolvedValueOnce({ Item: { linkedAt: 'already-recorded' } })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ Item: { mergeNoticePending: false } })
     const secondResult = await handler(event)
-    expect(JSON.parse(secondResult.body)).toEqual({ merged: false })
+    expect(JSON.parse(secondResult.body)).toMatchObject({ merged: false, notice: null })
   })
 
   it('rejects invalid email without querying Cognito', async () => {

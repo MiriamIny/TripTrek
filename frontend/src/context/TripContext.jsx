@@ -28,7 +28,7 @@ const makeItinerary = (trip) => {
 }
 
 export const TripProvider = ({ children }) => {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, accountReady } = useAuth()
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -39,6 +39,7 @@ export const TripProvider = ({ children }) => {
       setError('')
       return
     }
+    if (accountReady === false) return
 
     setLoading(true)
     setError('')
@@ -61,18 +62,18 @@ export const TripProvider = ({ children }) => {
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated, user?.userId])
+  }, [accountReady, isAuthenticated, user?.userId])
 
   const deleteTrip = useCallback(async (tripId) => {
     const trip = trips.find((candidate) => candidate.id === tripId)
     const isShared = trip?.access && trip.access !== 'owner'
     const path = isShared
       ? `tripShares?tripId=${encodeURIComponent(tripId)}&ownerId=${encodeURIComponent(trip.ownerId)}`
-      : `deleteTrip?tripId=${encodeURIComponent(tripId)}`
+      : `deleteTrip?tripId=${encodeURIComponent(tripId)}&ownerId=${encodeURIComponent(trip?.ownerId || user?.userId)}`
 
     await tripApiFetch(path, { method: 'DELETE' })
     await fetchTrips()
-  }, [fetchTrips, trips])
+  }, [fetchTrips, trips, user?.userId])
 
   const updateTripAPI = useCallback(async (tripId, updates, ownerId, expectedVersion) => {
     const query = new URLSearchParams({ tripId })
@@ -171,8 +172,10 @@ export const TripProvider = ({ children }) => {
     return imageUrl
   }, [fetchTrips, trips, updateTripAPI])
 
-  const getTripCollaborators = useCallback(async (tripId) => {
-    const response = await tripApiFetch(`tripShares?tripId=${encodeURIComponent(tripId)}`)
+  const getTripCollaborators = useCallback(async (tripId, ownerId) => {
+    const query = new URLSearchParams({ tripId })
+    if (ownerId) query.set('ownerId', ownerId)
+    const response = await tripApiFetch(`tripShares?${query}`)
     return response.json()
   }, [])
 
@@ -182,18 +185,20 @@ export const TripProvider = ({ children }) => {
     permission = 'editor',
     sendEmail = true,
     invitationMessage = '',
+    ownerId,
   ) => {
     const response = await tripApiFetch('tripShares', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tripId, email, permission, sendEmail, invitationMessage }),
+      body: JSON.stringify({ tripId, email, permission, sendEmail, invitationMessage, ownerId }),
     })
     return response.json()
   }, [])
 
-  const removeTripCollaborator = useCallback(async (tripId, email) => {
+  const removeTripCollaborator = useCallback(async (tripId, email, ownerId) => {
+    const owner = ownerId ? `&ownerId=${encodeURIComponent(ownerId)}` : ''
     await tripApiFetch(
-      `tripShares?tripId=${encodeURIComponent(tripId)}&email=${encodeURIComponent(email)}`,
+      `tripShares?tripId=${encodeURIComponent(tripId)}&email=${encodeURIComponent(email)}${owner}`,
       { method: 'DELETE' },
     )
   }, [])
@@ -201,13 +206,13 @@ export const TripProvider = ({ children }) => {
   const getTripById = useCallback((id) => trips.find((trip) => trip.id === id), [trips])
 
   useEffect(() => {
-    if (isAuthenticated && user?.userId) fetchTrips()
+    if (isAuthenticated && user?.userId && accountReady !== false) fetchTrips()
     else {
       setTrips([])
       setLoading(false)
       setError('')
     }
-  }, [fetchTrips, isAuthenticated, user?.userId])
+  }, [accountReady, fetchTrips, isAuthenticated, user?.userId])
 
   return (
     <TripContext.Provider value={{

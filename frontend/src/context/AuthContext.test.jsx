@@ -58,7 +58,7 @@ describe('AuthProvider', () => {
         'Miriam Iny|miriaminy123@gmail.com|https://example.com/miriam.jpg',
       ),
     ).toBeInTheDocument();
-    expect(await screen.findByText('Welcome back, Miriam!')).toBeInTheDocument();
+    expect(await screen.findByText('Welcome back, Miriam Iny!')).toBeInTheDocument();
   });
 
   it('shows the merge notice only when the backend consumes a pending first-link event', async () => {

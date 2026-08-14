@@ -123,7 +123,7 @@ The public contact endpoint validates and escapes input, uses a bot honeypot, an
 
 ### Cognito and Google account linking
 
-The `cognitoAccountLinker` Lambda links a first Google sign-in to one canonical native Cognito profile when Google supplies a verified email. The canonical Cognito `sub` remains stable so trips and sharing permissions continue to belong to the same account. Google sign-in refreshes the mapped `name` and `picture` attributes.
+The `cognitoAccountLinker` Lambda links a first Google sign-in to one canonical native Cognito profile when Google supplies a verified email. The application records every verified matching-email Cognito `sub` as an owner alias, preserving trips, notes, packing lists, and sharing controls created under either historical identity without copying or deleting records. Google sign-in refreshes the preferred `name` and `picture`, and the merge notification is consumed once.
 
 After deploying the SAM stack, attach the function in the Cognito console:
 
@@ -132,7 +132,7 @@ After deploying the SAM stack, attach the function in the Cognito console:
 3. Choose **Sign-up → Pre sign-up**.
 4. Select `cognitoAccountLinker`, then save.
 
-Do not attach it with a partial `update-user-pool` CLI call. Cognito resets omitted user-pool settings to their defaults. Existing federated profiles that have already completed Google sign-in are not linked retroactively; migrate their DynamoDB ownership and Cognito profiles separately before deleting anything.
+Do not attach it with a partial `update-user-pool` CLI call. Cognito resets omitted user-pool settings to their defaults. Existing duplicate profiles are reconciled non-destructively by verified email when the user next signs in. Do not delete either Cognito profile or manually move DynamoDB records while testing reconciliation.
 
 ## 📌 **Why Trek A Trip?**
 ### Because life is better when it's organized. Whether you're a meticulous planner or a spontaneous adventurer, **Trek A Trip** gives you the flexibility to build and adjust your itinerary on the fly.
