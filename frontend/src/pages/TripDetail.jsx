@@ -7,6 +7,7 @@ import DayWeather from '../components/DayWeather';
 import TripShareDialog from '../components/TripShareDialog';
 import TripWorkspace from '../components/TripWorkspace';
 import { useTripContext } from '../context/TripContext';
+import { useAuth } from '../context/AuthContext';
 import './TripDetail.css';
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -62,10 +63,53 @@ function HeroFallback() {
   );
 }
 
+function ShareIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3" /><path d="M3.5 18c.5-3.2 2.4-5 5.5-5s5 1.8 5.5 5M16 8h5M18.5 5.5v5" /></svg>;
+}
+
+function LeaveIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" /></svg>;
+}
+
+function TripBuddyAvatars({ buddies }) {
+  if (!buddies.length) return <span className="trip-detail-buddies-empty">Just you</span>;
+  return (
+    <span className="trip-detail-buddy-list" aria-label={`${buddies.length} trip buddies`}>
+      {buddies.slice(0, 5).map((buddy, index) => {
+        const label = buddy.name || buddy.email || 'Trip buddy';
+        const tooltip = `${label}${buddy.email && buddy.email !== label ? ` · ${buddy.email}` : ''}`;
+        return (
+          <span
+            className="trip-detail-buddy"
+            key={`${buddy.permission}-${buddy.email || index}`}
+            data-tooltip={tooltip}
+            aria-label={`${label}${buddy.email && buddy.email !== label ? `, ${buddy.email}` : ''}`}
+            tabIndex="0"
+          >
+            {buddy.picture ? (
+              <img src={buddy.picture} alt="" referrerPolicy="no-referrer" />
+            ) : label.charAt(0).toUpperCase()}
+          </span>
+        );
+      })}
+      {buddies.length > 5 && <span className="trip-detail-buddy is-overflow">+{buddies.length - 5}</span>}
+    </span>
+  );
+}
+
 export default function TripDetail() {
   const { tripId } = useParams();
   const navigate = useNavigate();
-  const { trips, loading, saveTrip, getTripById, fetchTrips } = useTripContext();
+  const { userAttributes = {}, user } = useAuth();
+  const {
+    trips,
+    loading,
+    saveTrip,
+    getTripById,
+    fetchTrips,
+    getTripBuddies,
+    deleteTrip,
+  } = useTripContext();
   const [trip, setTrip] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
   const [openMapDay, setOpenMapDay] = useState(null);
@@ -75,7 +119,10 @@ export default function TripDetail() {
   const [placeDetailsRequest, setPlaceDetailsRequest] = useState(null);
   const [showShare, setShowShare] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [buddies, setBuddies] = useState([]);
+  const [isHeroCompact, setIsHeroCompact] = useState(false);
   const saveErrorRef = useRef(null);
+  const contentStartRef = useRef(null);
 
   useEffect(() => {
     if (!saveError) return;
@@ -105,12 +152,59 @@ export default function TripDetail() {
     };
   }, [editingTrip, fetchTrips]);
 
+  useEffect(() => {
+    if (!trip || typeof getTripBuddies !== 'function') return undefined;
+    let isCurrent = true;
+    getTripBuddies(trip.id, trip.ownerId)
+      .then((data) => {
+        if (!isCurrent) return;
+        const currentEmail = String(
+          userAttributes.email || user?.attributes?.email || user?.signInDetails?.loginId || '',
+        ).trim().toLowerCase();
+        setBuddies(
+          [data.owner, ...(data.collaborators || [])]
+            .filter(Boolean)
+            .filter((buddy) => String(buddy.email || '').trim().toLowerCase() !== currentEmail),
+        );
+      })
+      .catch((loadError) => console.warn('Unable to load trip buddies:', loadError));
+    return () => { isCurrent = false; };
+  }, [getTripBuddies, trip, user, userAttributes.email]);
+
+  useEffect(() => {
+    const updateCompactHeader = () => {
+      const contentTop = contentStartRef.current?.getBoundingClientRect().top;
+      const compactAt = Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--site-header-height'),
+      ) + 42;
+      setIsHeroCompact(Number.isFinite(contentTop) && contentTop <= compactAt);
+    };
+    updateCompactHeader();
+    window.addEventListener('scroll', updateCompactHeader, { passive: true });
+    window.addEventListener('resize', updateCompactHeader);
+    return () => {
+      window.removeEventListener('scroll', updateCompactHeader);
+      window.removeEventListener('resize', updateCompactHeader);
+    };
+  }, [editingTrip, trip]);
+
   const activityCount = useMemo(() => (
     trip?.itinerary?.reduce((total, day) => total + (day.activities?.length || 0), 0) || 0
   ), [trip]);
   const tripLength = getTripLength(trip?.startDate, trip?.endDate);
   const isOwner = !trip?.access || trip.access === 'owner';
   const canEdit = isOwner || trip?.access === 'editor';
+
+  const handleLeaveTrip = async () => {
+    if (!window.confirm(`Leave the shared trip to ${trip.destination}?`)) return;
+    try {
+      setSaveError('');
+      await deleteTrip(trip.id);
+      navigate('/trips');
+    } catch (leaveError) {
+      setSaveError(leaveError.message || 'Unable to leave this trip.');
+    }
+  };
 
   const handleAutoSave = useCallback(async (updatedTrip) => {
     try {
@@ -221,20 +315,29 @@ export default function TripDetail() {
   return (
     <main className="trip-detail-page">
       <div className="trip-detail-inner">
-        <button type="button" className="trip-detail-back" onClick={() => navigate('/trips')}>
+        <button
+          type="button"
+          className="trips-context-backbar"
+          onClick={() => navigate('/trips')}
+        >
           <ArrowLeftIcon />
-          Back to Trips
+          <span>Back to Trips</span>
         </button>
 
-        <section className="trip-detail-hero">
+        <section className={`trip-detail-hero${isHeroCompact ? ' is-compact' : ''}`}>
           <div className="trip-detail-hero-media">
             {trip.imageUrl ? (
               <img src={trip.imageUrl} alt={`${trip.destination} trip`} />
             ) : (
               <HeroFallback />
             )}
-            <span className="trip-detail-saved-badge">
-              {isOwner ? 'Owner' : canEdit ? 'Editor' : 'Viewer'}
+            <span
+              className={`trip-detail-saved-badge${isOwner ? '' : ' is-shared'}`}
+              data-access={isOwner ? undefined : canEdit ? 'Editor' : 'Viewer'}
+              aria-label={isOwner ? 'Owner' : `Shared with you as ${canEdit ? 'Editor' : 'Viewer'}`}
+              tabIndex={isOwner ? undefined : 0}
+            >
+              {isOwner ? 'Owner' : 'Shared with you'}
             </span>
           </div>
 
@@ -261,6 +364,29 @@ export default function TripDetail() {
                 <dt>Plans</dt>
                 <dd>{activityCount} {activityCount === 1 ? 'activity' : 'activities'}</dd>
               </div>
+              <div className="trip-detail-buddies-stat">
+                <dt>Trip buddies</dt>
+                <dd>
+                  <TripBuddyAvatars buddies={buddies} />
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      className="trip-detail-buddy-action"
+                      title="Share trip"
+                      aria-label="Share Trip"
+                      onClick={() => setShowShare(true)}
+                    ><ShareIcon /></button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="trip-detail-buddy-action is-leave"
+                      title="Leave trip"
+                      aria-label="Leave Trip"
+                      onClick={handleLeaveTrip}
+                    ><LeaveIcon /></button>
+                  )}
+                </dd>
+              </div>
             </dl>
 
             {!editingTrip && (
@@ -279,20 +405,7 @@ export default function TripDetail() {
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="m5 16-.8 3.8L8 19l10-10-3-3L5 16ZM13.8 7.2l3 3" />
                     </svg>
-                    Edit Trip
-                  </button>
-                )}
-                {isOwner && (
-                  <button
-                    type="button"
-                    className="trip-detail-secondary-action"
-                    onClick={() => setShowShare(true)}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <circle cx="9" cy="8" r="3" />
-                      <path d="M3.5 18c.5-3.2 2.4-5 5.5-5s5 1.8 5.5 5M16 8h5M18.5 5.5v5" />
-                    </svg>
-                    Share Trip
+                    <span>Edit Trip</span>
                   </button>
                 )}
               </div>
@@ -312,7 +425,7 @@ export default function TripDetail() {
         )}
 
         {editingTrip ? (
-          <section className="trip-detail-edit-section" aria-label="Edit trip">
+          <section ref={contentStartRef} className="trip-detail-edit-section" aria-label="Edit trip">
             <TripForm
               trip={editingTrip}
               onAutoSave={handleAutoSave}
@@ -327,7 +440,7 @@ export default function TripDetail() {
           </section>
         ) : (
           <>
-            <section className="trip-detail-itinerary" aria-labelledby="trip-detail-itinerary-heading">
+            <section ref={contentStartRef} className="trip-detail-itinerary" aria-labelledby="trip-detail-itinerary-heading">
               <header className="trip-detail-section-heading">
                 <div>
                   <p className="trip-detail-eyebrow">Day by day</p>

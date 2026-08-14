@@ -244,7 +244,7 @@ function EmailPasswordSignIn({ email, onComplete, onForgotPassword, onUnknownAcc
       />
       {errorMessage && <p className="auth-email-error" role="alert">{errorMessage}</p>}
       <button type="submit" className="auth-choice-button auth-email-button" disabled={isSubmitting}>
-        {isSubmitting ? 'Signing in...' : 'Log in'}
+        {isSubmitting ? 'Signing in...' : 'Sign in'}
       </button>
       <button type="button" className="auth-text-link auth-forgot-password" onClick={onForgotPassword}>
         Forgot your password?

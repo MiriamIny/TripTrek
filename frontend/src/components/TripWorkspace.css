@@ -10,6 +10,7 @@
   left: 1.25rem;
   z-index: 2100;
   color: var(--workspace-ink);
+  transition: bottom 180ms ease;
 }
 
 .trip-workspace .sr-only {
@@ -342,6 +343,10 @@
     left: auto;
   }
 
+  body.trip-form-actions-docked .trip-workspace {
+    bottom: 11rem;
+  }
+
   .trip-workspace-rail {
     flex-direction: column;
   }
@@ -369,7 +374,9 @@
 
 @media (max-width: 400px) {
   .trip-workspace { right: auto; bottom: 0.75rem; left: 0.75rem; }
+  body.trip-form-actions-docked .trip-workspace { bottom: 6.1rem; }
   .trip-workspace-panel { bottom: 64px; width: calc(100vw - 1.5rem); max-height: calc(100dvh - 155px); border-radius: 20px; }
+  body.trip-form-actions-docked .trip-workspace-panel { max-height: calc(100dvh - 185px); }
   .trip-workspace-body { min-height: 190px; }
   .trip-workspace-notes textarea { min-height: 230px; }
   .trip-workspace-delete { opacity: 1; }

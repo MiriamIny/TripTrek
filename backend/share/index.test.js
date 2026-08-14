@@ -6,6 +6,7 @@ const sesSend = vi.fn()
 vi.mock('@aws-sdk/client-dynamodb', () => ({ DynamoDBClient: vi.fn() }))
 vi.mock('@aws-sdk/lib-dynamodb', () => ({
   DynamoDBDocumentClient: { from: vi.fn(() => ({ send: dbSend })) },
+  BatchGetCommand: vi.fn((input) => ({ type: 'batch-get', ...input })),
   GetCommand: vi.fn((input) => ({ type: 'get', ...input })),
   QueryCommand: vi.fn((input) => ({ type: 'query', ...input })),
   TransactWriteCommand: vi.fn((input) => ({ type: 'transaction', ...input })),
@@ -119,5 +120,31 @@ describe('tripShares invitation email', () => {
 
     expect(result.statusCode).toBe(201)
     expect(dbSend.mock.calls[2][0].TransactItems[0].ConditionCheck.Key.pk).toBe('legacy-sub')
+  })
+
+  it('returns safe profile details to trip buddies without changing the owner sharing response', async () => {
+    dbSend.mockReset()
+      .mockResolvedValueOnce({ Item: {
+        pk: 'owner-1', sk: 'trip-1', ownerEmail: 'owner@example.com', ownerName: 'Miriam',
+      } })
+      .mockResolvedValueOnce({ Items: [{
+        email: 'friend@example.com', permission: 'editor', createdAt: '2026-01-01',
+      }] })
+      .mockResolvedValueOnce({ Responses: { TripTrek: [] } })
+    const { handler } = await import('./index.js')
+    const result = await handler({
+      requestContext: {
+        authorizer: { jwt: { claims: { sub: 'owner-1', email: 'owner@example.com' } } },
+        http: { method: 'GET' },
+      },
+      queryStringParameters: { tripId: 'trip-1', includeProfiles: 'true' },
+    })
+
+    expect(result.statusCode).toBe(200)
+    const body = JSON.parse(result.body)
+    expect(body.owner).toMatchObject({ name: 'Miriam', email: 'owner@example.com' })
+    expect(body.collaborators[0]).toMatchObject({
+      email: 'friend@example.com', permission: 'editor',
+    })
   })
 })
